@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="Placeholder portrait of the IvanBuilds AI persona">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#164e63"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.35" r="0.6">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <rect width="800" height="1000" fill="url(#glow)"/>
+
+  <!-- Subtle grid -->
+  <g stroke="#334155" stroke-opacity="0.18" stroke-width="1">
+    <path d="M0 100 H800 M0 200 H800 M0 300 H800 M0 400 H800 M0 500 H800 M0 600 H800 M0 700 H800 M0 800 H800 M0 900 H800"/>
+    <path d="M100 0 V1000 M200 0 V1000 M300 0 V1000 M400 0 V1000 M500 0 V1000 M600 0 V1000 M700 0 V1000"/>
+  </g>
+
+  <!-- Abstract figure -->
+  <g>
+    <!-- Shoulders / torso -->
+    <path d="M220 1000 C230 780 320 700 400 700 C480 700 570 780 580 1000 Z" fill="url(#body)" stroke="url(#ring)" stroke-width="3"/>
+    <!-- Neck -->
+    <rect x="368" y="600" width="64" height="120" rx="28" fill="#1e293b" stroke="url(#ring)" stroke-width="2"/>
+    <!-- Head -->
+    <circle cx="400" cy="430" r="170" fill="#16233b" stroke="url(#ring)" stroke-width="3"/>
+    <!-- Hair line -->
+    <path d="M240 420 C245 300 320 230 400 230 C480 230 555 300 560 420 C520 350 470 320 400 320 C330 320 280 350 240 420 Z" fill="#0b1220"/>
+    <!-- Face glow eyes -->
+    <circle cx="345" cy="425" r="12" fill="#22d3ee"/>
+    <circle cx="455" cy="425" r="12" fill="#22d3ee"/>
+    <path d="M360 500 Q400 530 440 500" stroke="#22d3ee" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- Decorative code bars -->
+  <g fill="#22d3ee" opacity="0.5">
+    <rect x="90" y="160" width="120" height="10" rx="5"/>
+    <rect x="110" y="185" width="80" height="10" rx="5" opacity="0.7"/>
+    <rect x="590" y="160" width="120" height="10" rx="5" opacity="0.7"/>
+    <rect x="610" y="185" width="90" height="10" rx="5" opacity="0.45"/>
+  </g>
+
+  <!-- Badge -->
+  <g>
+    <rect x="250" y="880" width="300" height="56" rx="28" fill="#020617" stroke="url(#ring)" stroke-width="2"/>
+    <text x="400" y="916" font-family="'JetBrains Mono', monospace" font-size="22" fill="#94a3b8" text-anchor="middle">IMAGEN 3 RENDER PENDING</text>
+  </g>
+</svg>
