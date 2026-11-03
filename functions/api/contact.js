@@ -1,15 +1,24 @@
 // Cloudflare Pages Function — POST /api/contact
 //
-// Receives the contact-form submission and forwards it to your inbox via
-// Resend (https://resend.com). The Resend API key lives SERVER-SIDE as a
-// Cloudflare environment variable — nothing sensitive is in the client bundle.
+// Receives the contact-form submission and forwards it to your inbox.
+// Two transports, auto-selected by the environment variables you set
+// (Cloudflare dashboard → Settings → Variables & Secrets, or .dev.vars locally):
 //
-// Environment variables (Cloudflare dashboard → Pages project → Settings →
-// Variables and Secrets, or .dev.vars for local `wrangler pages dev`):
-//   RESEND_API_KEY  – required, secret (https://resend.com → API Keys)
-//   CONTACT_EMAIL   – recipient inbox (defaults to the address baked into the site)
-//   CONTACT_FROM    – verified sender, e.g. "IvanBuilds Site <noreply@ivanbuilds.dev>"
-//                     (for local testing only: "IvanBuilds Site <onboarding@resend.dev>")
+//   A) Gmail SMTP (preferred — zero new vendors, the epone-web pattern):
+//        GMAIL_USER         – Gmail address that sends the mail
+//        GMAIL_APP_PASSWORD – its app password (https://myaccount.google.com/apppasswords,
+//                             same credential you use in epone-web/functions/.env)
+//      → speaks SMTP directly to smtp.gmail.com:465 via cloudflare:sockets
+//        (hand-rolled protocol — see smtp-gmail.js; nodemailer can't run on Workers)
+//
+//   B) Resend fallback (optional, https://resend.com — 3000 emails/mo):
+//        RESEND_API_KEY     – server-side secret
+//      → simple HTTPS relay
+//
+//   Optional either way:
+//        CONTACT_EMAIL – recipient inbox (defaults to the address baked into the site)
+
+import { buildMessage, smtpDialog } from './smtp-gmail.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -51,12 +60,27 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: 'validation_failed' }, 400)
   }
 
+  const to = env.CONTACT_EMAIL || 'hvaneyeochonghan@gmail.com'
+
+  // ── Transport selection ──────────────────────────────────────────────
+  const gmailUser = env.GMAIL_USER || ''
+  const gmailPass = env.GMAIL_APP_PASSWORD || ''
+
+  if (gmailUser && gmailPass) {
+    try {
+      await sendViaGmail({ user: gmailUser, pass: gmailPass, to, name, email, inquiryType, message })
+      return json({ ok: true })
+    } catch (e) {
+      console.error('Gmail SMTP relay failed:', e?.message)
+      return json({ ok: false, error: 'relay_failed' }, 502)
+    }
+  }
+
   if (!env.RESEND_API_KEY) {
-    console.error('RESEND_API_KEY not configured')
+    console.error('No email transport configured (GMAIL_USER/GMAIL_APP_PASSWORD or RESEND_API_KEY)')
     return json({ ok: false, error: 'relay_not_configured' }, 500)
   }
 
-  const to = env.CONTACT_EMAIL || 'hvaneyeochonghan@gmail.com'
   const from = env.CONTACT_FROM || 'IvanBuilds Site <onboarding@resend.dev>'
 
   const res = await fetch('https://api.resend.com/emails', {
@@ -81,4 +105,53 @@ export async function onRequestPost(context) {
   }
 
   return json({ ok: true })
+}
+
+// ── Transport A: Gmail SMTP via cloudflare:sockets ───────────────────────
+// (The dynamic import keeps Node unit tests importable — cloudflare:sockets
+//  only exists in the Workers runtime.)
+async function sendViaGmail({ user, pass, to, name, email, inquiryType, message }) {
+  const { connect } = await import('cloudflare:sockets')
+  const socket = connect('smtp.gmail.com:465', { secureTransport: 'on' })
+
+  const encoder = new TextEncoder()
+  const decoder = new TextDecoder()
+  const writer = socket.writable.getWriter()
+  const reader = socket.readable.getReader()
+  let buffer = ''
+
+  const io = {
+    async readLine() {
+      let idx
+      while ((idx = buffer.indexOf('\n')) === -1) {
+        const { value, done } = await reader.read()
+        if (done) throw new Error('SMTP connection closed unexpectedly')
+        buffer += decoder.decode(value, { stream: true })
+      }
+      const line = buffer.slice(0, idx)
+      buffer = buffer.slice(idx + 1)
+      return line.replace(/\r$/, '')
+    },
+    async write(s) {
+      await writer.write(encoder.encode(s))
+    }
+  }
+
+  try {
+    await smtpDialog(io, {
+      user,
+      pass,
+      to,
+      message: buildMessage({
+        from: user, // Gmail rewrites this to the authenticated account anyway
+        to,
+        replyTo: email,
+        subject: `[Consulting inquiry] ${inquiryType || 'General'} — from ${name}`,
+        body: `Name: ${name}\nEmail: ${email}\nInquiry: ${inquiryType}\n\n${message}`
+      })
+    })
+  } finally {
+    try { await writer.close() } catch { /* socket may already be closed */ }
+    try { socket.close() } catch { /* idem */ }
+  }
 }

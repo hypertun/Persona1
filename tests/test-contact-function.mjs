@@ -148,6 +148,30 @@ await test('falls back to baked-in recipient/from defaults', async () => {
   assert.match(payload.from, /onboarding@resend\.dev/)
 })
 
+// 11. Transport selection: Gmail creds → SMTP path, Resend never called
+//    (In Node, cloudflare:sockets doesn't exist, so the SMTP send fails — which
+//    is exactly what lets us prove the SMTP branch was selected: 502 with zero
+//    Resend calls. On Cloudflare the same path completes the real delivery.)
+await test('GMAIL_* creds present → SMTP transport selected (not Resend)', async () => {
+  fetchCalls = []
+  globalThis.fetch = async () => {
+    fetchCalls.push('resend-should-not-be-called')
+    return new Response('{}', { status: 200 })
+  }
+  const request = new Request('https://x.pages.dev/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(valid)
+  })
+  const res = await onRequestPost({
+    request,
+    env: { GMAIL_USER: 'sender@gmail.com', GMAIL_APP_PASSWORD: 'abcd efgh ijkl mnop' }
+  })
+  assert.equal(res.status, 502, 'SMTP attempt fails in Node (no cloudflare:sockets)')
+  assert.equal((await res.json()).error, 'relay_failed')
+  assert.equal(fetchCalls.length, 0, 'must NOT call Resend when Gmail creds are set')
+})
+
 globalThis.fetch = realFetch
 
 console.log(results.join('\n'))

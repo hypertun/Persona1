@@ -1,5 +1,15 @@
 # Local secrets for `npx wrangler pages dev` (never commit the real .dev.vars).
-# Get a Resend key: https://resend.com → API Keys (free tier: 100 emails/day).
-RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxx"
+#
+# Transport A — Gmail SMTP (preferred: zero new vendors, the epone-web pattern).
+# App password: https://myaccount.google.com/apppasswords
+# (2FA must be enabled; it's the same kind of credential you use in
+#  epone-web/functions/.env). Gmail consumer limit: ~500 recipients/day.
+GMAIL_USER="sender@gmail.com"
+GMAIL_APP_PASSWORD="abcd efgh ijkl mnop"
+
+# Transport B — Resend fallback (optional; only used if GMAIL_* are unset).
+# Get a key: https://resend.com → API Keys (free tier: 100 emails/day).
+# RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxx"
+
+# Recipient inbox (defaults to the one baked into src/data/site.js).
 CONTACT_EMAIL="hvaneyeochonghan@gmail.com"
-CONTACT_FROM="IvanBuilds Site <onboarding@resend.dev>"

@@ -52,12 +52,12 @@
 
 ### A. Launch the website (≈15 min — hosting choice)
 
-**Recommended: Cloudflare Pages** — same free static hosting, but it includes a free serverless function (`functions/api/contact.js`, built ✅) that sends the contact form **directly to your inbox** via Resend with the API key kept server-side — the setup you wanted, which GitHub Pages can't do. Also: root-domain serving (no base-path config), preview URLs per branch, edge CDN with a Singapore PoP.
+**Recommended: Cloudflare Pages** — same free static hosting, but it includes a free serverless function (`functions/api/contact.js`, built ✅) that sends the contact form **directly to your inbox** — via **Gmail SMTP** (reuses the epone-web app-password pattern — zero new vendors, no Resend needed) or Resend as optional fallback. Credentials stay server-side. Also: root-domain serving (no base-path config), preview URLs per branch, edge CDN with a Singapore PoP.
 
-- [ ] **1. Cloudflare deploy** — dashboard → **Workers & Pages → Create → Pages → Connect to Git** → this repo (build `npm run build`, output `dist` — auto-detected) → build vars: `VITE_CONTACT_API=/api/contact` → runtime vars/secrets: `RESEND_API_KEY` (create free at [resend.com](https://resend.com) → 3,000 emails/mo), `CONTACT_EMAIL` = your inbox, optional `CONTACT_FROM` = verified sender → live at `https://ivanbuilds.pages.dev`
+- [ ] **1. Cloudflare deploy** — dashboard → **Workers & Pages → Create → Pages → Connect to Git** → this repo (build `npm run build`, output `dist` — auto-detected) → build vars: `VITE_CONTACT_API=/api/contact` → runtime secrets: `GMAIL_USER` + `GMAIL_APP_PASSWORD` (app password at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) — same pattern as epone-web), `CONTACT_EMAIL` = your inbox → live at `https://ivanbuilds.pages.dev`
 - [ ] **2. Test the funnel on the live site** — submit a test inquiry → confirm it arrives at hvaneyeochonghan@gmail.com (function logs: CF dashboard → Pages project → Functions → logs)
 - [ ] **3. (Alternative: GitHub Pages)** — works from the same repo via `deploy.yml` → `git push origin main` → repo **Settings → Pages → Source: `gh-pages` branch** → live at `https://hypertun.github.io/Persona1/` — but the form there uses mailto/Formspree/EmailJS (no serverless function available on GH Pages)
-- [ ] **4. (Optional custom domain)** — add `ivanbuilds.dev` (or similar) in Cloudflare → Custom domains; also verify the domain in Resend for production email sending (until verified, the free tier can only deliver to your own account address)
+- [ ] **4. (Optional custom domain)** — add `ivanbuilds.dev` (or similar) in Cloudflare → Custom domains. (With Gmail SMTP transport, no domain verification is needed — email is sent from your Gmail account.)
 
 ### B. Set up the AI generation pipeline (≈30 min, one-time)
 

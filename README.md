@@ -6,7 +6,7 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 |---|---|
 | Website | Vue 3 (Vite) + Tailwind CSS 4 |
 | Hosting | **Cloudflare Pages** (recommended — adds a free serverless function) *or* GitHub Pages |
-| Contact form | Own CF Pages Function (`/api/contact` → Resend) · Formspree · EmailJS · mailto fallback — auto-detected |
+| Contact form | Own CF Pages Function (`/api/contact` → Gmail SMTP **or** Resend) · Formspree · EmailJS · mailto fallback — auto-detected |
 | Content pipeline | Gemini 1.5 Pro (scripts) · Vertex AI TTS (voiceover) · Imagen 3 (persona visuals) · HeyGen/Synthesia (avatar animation) |
 
 > ⚠️ **Content integrity rule:** every claim on the site and in every video must trace back to the résumé (*48451 – Senior Consultant Developer – Ivan Yeo.docx.pdf*). The data module `src/data/site.js` is the single source of truth — do not add unbacked claims.
@@ -17,7 +17,8 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 
 ```
 ├── .github/workflows/deploy.yml   # CI: build → deploy dist/ to gh-pages branch (GitHub Pages path)
-├── functions/api/contact.js       # Cloudflare Pages Function: /api/contact → Resend relay
+├── functions/api/contact.js       # Cloudflare Pages Function: /api/contact → Gmail SMTP / Resend
+├── functions/api/smtp-gmail.js    # Hand-rolled Gmail SMTP client (cloudflare:sockets)
 ├── wrangler.toml                  # Cloudflare Pages config (wrangler dev / deploy)
 ├── docs/
 │   ├── 01_AI_PERSONA.md           # Persona: name/handles, Imagen 3 blueprint, voice bible
@@ -53,7 +54,7 @@ npm run preview        # serve the production build locally
 The form auto-detects its routing mode from environment variables — highest priority first.
 
 ### Mode 1 — Own Cloudflare Pages Function (recommended)
-`functions/api/contact.js` receives the POST at `/api/contact` and relays to your inbox via Resend, with the API key stored server-side as a Cloudflare secret — it never appears in the client bundle. Activate with the build variable `VITE_CONTACT_API=/api/contact` — full setup in "Deploy to Cloudflare Pages" below.
+`functions/api/contact.js` receives the POST at `/api/contact` and relays to your inbox — either directly via **Gmail SMTP** (your app password, stored server-side; zero new vendors) or via **Resend** (optional fallback). Credentials never appear in the client bundle — they're Cloudflare secrets. Activate with the build variable `VITE_CONTACT_API=/api/contact` — full setup in "Deploy to Cloudflare Pages" below.
 
 ### Mode 2 — Formspree (if staying on GitHub Pages)
 1. Sign up at [formspree.io](https://formspree.io) → **New form** (free: 50 submissions/mo).
@@ -86,26 +87,32 @@ With nothing configured, submitting opens the visitor's email app with a pre-fil
 
 ## Deploy to Cloudflare Pages (recommended — adds the email superpower)
 
-**Why:** identical free static hosting, but Cloudflare Pages includes **Pages Functions** (serverless, 100k req/day free) — the repo ships with `functions/api/contact.js`, which makes the contact form deliver straight to your inbox with a server-side secret (no Formspree/EmailJS, no public keys). Cloudflare also serves from the root domain (no `/Persona1/` base path) and gives every branch a preview URL.
+**Why:** identical free static hosting, but Cloudflare Pages includes **Pages Functions** (serverless, 100k req/day free) — the repo ships with `functions/api/contact.js`, which makes the contact form deliver straight to your inbox with server-side secrets (no Formspree/EmailJS, no public keys). Cloudflare also serves from the root domain (no `/Persona1/` base path) and gives every branch a preview URL.
 
 1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git** → select this repo.
 2. Build settings (auto-detected for Vite): build command `npm run build`, output `dist`.
 3. Build environment variables (Settings → Variables, **Production**):
    - `VITE_CONTACT_API=/api/contact`
    - `VITE_CONTACT_EMAIL=<your inbox>` (optional — defaults to the one in `src/data/site.js`)
-4. Runtime secrets for the function (Settings → Variables & Secrets — server-side only):
-   - `RESEND_API_KEY` — create a free account at [resend.com](https://resend.com) → API Keys (free: 3,000 emails/mo). For production, verify your sending domain in Resend (add the DNS records — Cloudflare makes this one click) and set `CONTACT_FROM` to e.g. `IvanBuilds Site <noreply@yourdomain.com>`.
-   - `CONTACT_EMAIL` — recipient inbox (defaults to the baked-in address)
-   - `CONTACT_FROM` — (optional, recommended) verified sender address
+4. Runtime secrets for the function (Settings → Variables & Secrets — server-side only). **Pick one transport:**
+
+   **Transport A — Gmail SMTP (recommended: zero new vendors, the epone-web pattern):**
+   - `GMAIL_USER` — the Gmail address that sends the mail
+   - `GMAIL_APP_PASSWORD` — its app password ([myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords); 2FA must be on — the same kind of credential epone-web uses). The function speaks SMTP directly to `smtp.gmail.com:465` via `cloudflare:sockets` (hand-rolled protocol in `functions/api/smtp-gmail.js` — nodemailer can't run on Workers). ~500 recipients/day Gmail limit — ample for lead-gen.
+
+   **Transport B — Resend (optional fallback, only used if `GMAIL_*` are unset):**
+   - `RESEND_API_KEY` — create a free account at [resend.com](https://resend.com) → API Keys (free: 3,000 emails/mo). Verify a sending domain for production and set `CONTACT_FROM` to e.g. `IvanBuilds Site <noreply@yourdomain.com>`.
+
+   **Either way:** `CONTACT_EMAIL` — recipient inbox (defaults to the baked-in address).
 5. Deploy. Live at `https://ivanbuilds.pages.dev` (or your custom domain → Custom domains → add).
 
 **Test locally with functions:**
 ```bash
-cp .dev.vars.example .dev.vars   # add your Resend key
+cp .dev.vars.example .dev.vars   # add your Gmail app password
 npm run build && npx wrangler pages dev   # serves dist/ + /api/contact at localhost:8788
 ```
 
-> Security notes: the Resend API key only exists server-side (never in the client bundle); submissions are validated and header-sanitized in the function; a honeypot field filters bots. Optional hardening: enable [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) (free) on the form.
+> Security notes: all transport credentials only exist server-side (never in the client bundle); submissions are validated and header-sanitized in the function; a honeypot field filters bots. The Gmail app password is more powerful than a scoped API key (it also grants IMAP access to the account if leaked) — consider a dedicated Gmail account for site mail. Optional hardening: enable [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) (free) on the form.
 
 ## Deploy to GitHub Pages (zero-dependency alternative)
 
