@@ -46,9 +46,11 @@ npm run build          # production build → dist/
 npm run preview        # serve the production build locally
 ```
 
-## Contact form setup (5 minutes — pick one)
+## Contact form setup
 
-### Option A — Formspree (simplest)
+**Default (zero third-party):** with nothing configured, the form opens the visitor's email app with a pre-filled draft to your inbox (`VITE_CONTACT_EMAIL`, default baked into `src/data/site.js`). Works on GitHub Pages as-is — but visitors with no configured mail app (webmail-only users) can't submit. For a lead-gen site, one of the relays below is recommended.
+
+### Option A — Formspree (simplest, recommended)
 1. Sign up at [formspree.io](https://formspree.io) → **New form**.
 2. Copy the endpoint (`https://formspree.io/f/xxxxxxxx`).
 3. Create `.env.local` (or `.env`) with:
@@ -72,7 +74,7 @@ npm run preview        # serve the production build locally
    VITE_EMAILJS_PUBLIC_KEY=xxxxxxxxxxxxxxxx
    ```
 
-**Without either configured**, the form degrades to a pre-filled `mailto:` draft — the site still works.
+**Without either configured**, the form falls back to a pre-filled `mailto:` draft — the site still works, and placeholder values (e.g. `xxxxxxxx` left from `.env.example`) are ignored automatically.
 
 ### Test the integration
 1. `npm run build && npm run preview` → submit a test inquiry.

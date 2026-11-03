@@ -22,9 +22,13 @@ const config = {
   publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY ?? ''
 }
 
+// Ignore leftover template placeholders from .env.example ("xxxxxxxx")
+// so the form never POSTs to a dead endpoint.
+const isSet = (v) => !!v && !/x{4,}/i.test(v)
+
 const mode = computed(() => {
-  if (config.formspreeEndpoint) return 'formspree'
-  if (config.serviceId && config.templateId && config.publicKey) return 'emailjs'
+  if (isSet(config.formspreeEndpoint)) return 'formspree'
+  if (isSet(config.serviceId) && isSet(config.templateId) && isSet(config.publicKey)) return 'emailjs'
   return 'mailto'
 })
 
@@ -48,6 +52,7 @@ const errors = computed(() => ({
     : ''
 }))
 const valid = computed(() => !errors.value.name && !errors.value.email && !errors.value.message)
+const submitLabel = computed(() => (mode.value === 'mailto' ? 'Open email draft' : 'Send inquiry'))
 
 function mailtoHref() {
   const subject = `[Consulting inquiry] ${form.type} — from ${form.name}`
@@ -92,7 +97,7 @@ async function submit() {
       if (!result?.text || result.status === 'error') throw new Error('EmailJS send failed')
     } else {
       // Fallback: open the visitor's mail client with a pre-filled draft.
-      window.location.href = mailtoHref()
+      if (typeof window !== 'undefined') window.location.href = mailtoHref()
       status.value = 'success'
       return
     }
@@ -211,14 +216,14 @@ async function submit() {
           >
             <template v-if="status === 'sending'">Sending…</template>
             <template v-else>
-              Send inquiry
+              {{ submitLabel }}
               <Icon name="arrow-right" class="h-4 w-4" />
             </template>
           </button>
 
-          <p v-if="mode === 'mailto'" class="text-center text-xs text-slate-500">
-            Email routing isn't configured yet — sending will open your mail client.
-            <span class="text-slate-600">(Site owner: see README → Contact form setup.)</span>
+          <p v-if="mode === 'mailto'" class="text-center text-xs leading-relaxed text-slate-500">
+            Submitting opens your email app with a pre-filled draft addressed to me —
+            your inquiry goes straight to my inbox, nothing is stored anywhere else.
           </p>
 
           <!-- Status banners -->
@@ -227,7 +232,11 @@ async function submit() {
             class="flex items-start gap-3 rounded-xl bg-emerald-400/10 p-4 text-sm text-emerald-300 ring-1 ring-emerald-400/30"
           >
             <Icon name="check" class="mt-0.5 h-4 w-4 shrink-0" />
-            <span>
+            <span v-if="mode === 'mailto'">
+              <strong>Your email app has opened with a pre-filled draft.</strong>
+              Just hit send and it lands in my inbox — I'll reply within one business day.
+            </span>
+            <span v-else>
               <strong>Message sent.</strong> Thanks for reaching out — I'll get back to you within
               one business day.
             </span>

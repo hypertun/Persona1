@@ -8,9 +8,9 @@
  */
 
 // Public contact address shown on the site (overridable via VITE_CONTACT_EMAIL env).
-// TODO: replace the default with the real inbox that receives consultation inquiries.
+// This address is public on the site regardless, so it lives here directly.
 export const CONTACT_EMAIL =
-  import.meta.env.VITE_CONTACT_EMAIL || 'hello@ivanbuilds.dev'
+  import.meta.env.VITE_CONTACT_EMAIL || 'hvaneyeochonghan@gmail.com'
 
 export const profile = {
   name: 'Ivan Yeo',
