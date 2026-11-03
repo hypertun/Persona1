@@ -5,8 +5,8 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 | Layer | Stack |
 |---|---|
 | Website | Vue 3 (Vite) + Tailwind CSS 4 |
-| Hosting | GitHub Pages (static, via `gh-pages` branch) |
-| Contact form | EmailJS **or** Formspree — no backend required |
+| Hosting | **Cloudflare Pages** (recommended — adds a free serverless function) *or* GitHub Pages |
+| Contact form | Own CF Pages Function (`/api/contact` → Resend) · Formspree · EmailJS · mailto fallback — auto-detected |
 | Content pipeline | Gemini 1.5 Pro (scripts) · Vertex AI TTS (voiceover) · Imagen 3 (persona visuals) · HeyGen/Synthesia (avatar animation) |
 
 > ⚠️ **Content integrity rule:** every claim on the site and in every video must trace back to the résumé (*48451 – Senior Consultant Developer – Ivan Yeo.docx.pdf*). The data module `src/data/site.js` is the single source of truth — do not add unbacked claims.
@@ -16,7 +16,9 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 ## Project structure
 
 ```
-├── .github/workflows/deploy.yml   # CI: build → deploy dist/ to gh-pages branch
+├── .github/workflows/deploy.yml   # CI: build → deploy dist/ to gh-pages branch (GitHub Pages path)
+├── functions/api/contact.js       # Cloudflare Pages Function: /api/contact → Resend relay
+├── wrangler.toml                  # Cloudflare Pages config (wrangler dev / deploy)
 ├── docs/
 │   ├── 01_AI_PERSONA.md           # Persona: name/handles, Imagen 3 blueprint, voice bible
 │   ├── 02_CONTENT_STRATEGY.md     # 30-day content calendar (TikTok/Reels/Shorts)
@@ -46,18 +48,19 @@ npm run build          # production build → dist/
 npm run preview        # serve the production build locally
 ```
 
-## Contact form setup
+## Contact form routing (priority order)
 
-**Default (zero third-party):** with nothing configured, the form opens the visitor's email app with a pre-filled draft to your inbox (`VITE_CONTACT_EMAIL`, default baked into `src/data/site.js`). Works on GitHub Pages as-is — but visitors with no configured mail app (webmail-only users) can't submit. For a lead-gen site, one of the relays below is recommended.
+The form auto-detects its routing mode from environment variables — highest priority first.
 
-### Option A — Formspree (simplest, recommended)
-1. Sign up at [formspree.io](https://formspree.io) → **New form**.
-2. Copy the endpoint (`https://formspree.io/f/xxxxxxxx`).
-3. Create `.env.local` (or `.env`) with:
+### Mode 1 — Own Cloudflare Pages Function (recommended)
+`functions/api/contact.js` receives the POST at `/api/contact` and relays to your inbox via Resend, with the API key stored server-side as a Cloudflare secret — it never appears in the client bundle. Activate with the build variable `VITE_CONTACT_API=/api/contact` — full setup in "Deploy to Cloudflare Pages" below.
+
+### Mode 2 — Formspree (if staying on GitHub Pages)
+1. Sign up at [formspree.io](https://formspree.io) → **New form** (free: 50 submissions/mo).
+2. Copy the endpoint (`https://formspree.io/f/xxxxxxxx`) → set in `.env.local`:
    `VITE_FORMSPREE_ENDPOINT=https://formspree.io/f/xxxxxxxx`
-4. Done. No other config needed.
 
-### Option B — EmailJS
+### Mode 3 — EmailJS
 1. Sign up at [emailjs.com](https://dashboard.emailjs.com) (free tier: 200 emails/mo).
 2. **Email Services →** Add your inbox (e.g. Gmail) → copy the **Service ID** (`service_...`).
 3. **Email Templates →** Create template → copy the **Template ID** (`template_...`). Use these variables in the body:
@@ -66,22 +69,45 @@ npm run preview        # serve the production build locally
    Subject: New inquiry — {{inquiry_type}}
    Body:    {{message}}
    ```
-4. **Account → API Keys →** copy the **Public key**.
-5. Set in `.env.local`:
+4. **Account → API Keys →** copy the **Public key** → set in `.env.local`:
    ```
    VITE_EMAILJS_SERVICE_ID=service_xxxxxxx
    VITE_EMAILJS_TEMPLATE_ID=template_xxxxxxx
    VITE_EMAILJS_PUBLIC_KEY=xxxxxxxxxxxxxxxx
    ```
 
-**Without either configured**, the form falls back to a pre-filled `mailto:` draft — the site still works, and placeholder values (e.g. `xxxxxxxx` left from `.env.example`) are ignored automatically.
+### Mode 4 — mailto fallback (zero third-party)
+With nothing configured, submitting opens the visitor's email app with a pre-filled draft to your inbox (`VITE_CONTACT_EMAIL`, default baked into `src/data/site.js`). Works anywhere — but visitors with no configured mail app (webmail-only users) can't submit. Placeholder values (e.g. `xxxxxxxx` left from `.env.example`) are ignored automatically, so a half-configured env can never break the form.
 
 ### Test the integration
 1. `npm run build && npm run preview` → submit a test inquiry.
-2. Check the configured inbox (Formspree: also check the dashboard → Submissions; EmailJS: dashboard → Email Activity).
-3. On GitHub, set the same variables as **repository secrets** (Settings → Secrets and variables → Actions) so CI builds include them: `VITE_FORMSPREE_ENDPOINT` *or* the three `VITE_EMAILJS_*` vars, plus `VITE_CONTACT_EMAIL`.
+2. Check the configured inbox (Formspree: dashboard → Submissions; EmailJS: dashboard → Email Activity; Cloudflare function: `npx wrangler pages dev` logs + your inbox).
+3. On GitHub, set the same variables as **repository secrets** (Settings → Secrets and variables → Actions) so CI builds include them: `VITE_CONTACT_API` *or* `VITE_FORMSPREE_ENDPOINT` *or* the three `VITE_EMAILJS_*` vars, plus `VITE_CONTACT_EMAIL`.
 
-## Deploy to GitHub Pages
+## Deploy to Cloudflare Pages (recommended — adds the email superpower)
+
+**Why:** identical free static hosting, but Cloudflare Pages includes **Pages Functions** (serverless, 100k req/day free) — the repo ships with `functions/api/contact.js`, which makes the contact form deliver straight to your inbox with a server-side secret (no Formspree/EmailJS, no public keys). Cloudflare also serves from the root domain (no `/Persona1/` base path) and gives every branch a preview URL.
+
+1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git** → select this repo.
+2. Build settings (auto-detected for Vite): build command `npm run build`, output `dist`.
+3. Build environment variables (Settings → Variables, **Production**):
+   - `VITE_CONTACT_API=/api/contact`
+   - `VITE_CONTACT_EMAIL=<your inbox>` (optional — defaults to the one in `src/data/site.js`)
+4. Runtime secrets for the function (Settings → Variables & Secrets — server-side only):
+   - `RESEND_API_KEY` — create a free account at [resend.com](https://resend.com) → API Keys (free: 3,000 emails/mo). For production, verify your sending domain in Resend (add the DNS records — Cloudflare makes this one click) and set `CONTACT_FROM` to e.g. `IvanBuilds Site <noreply@yourdomain.com>`.
+   - `CONTACT_EMAIL` — recipient inbox (defaults to the baked-in address)
+   - `CONTACT_FROM` — (optional, recommended) verified sender address
+5. Deploy. Live at `https://ivanbuilds.pages.dev` (or your custom domain → Custom domains → add).
+
+**Test locally with functions:**
+```bash
+cp .dev.vars.example .dev.vars   # add your Resend key
+npm run build && npx wrangler pages dev   # serves dist/ + /api/contact at localhost:8788
+```
+
+> Security notes: the Resend API key only exists server-side (never in the client bundle); submissions are validated and header-sanitized in the function; a honeypot field filters bots. Optional hardening: enable [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) (free) on the form.
+
+## Deploy to GitHub Pages (zero-dependency alternative)
 
 1. Push this repo to GitHub (branch `main`).
 2. Repo **Settings → Pages → Build and deployment → Source: *Deploy from a branch*** → Branch: **`gh-pages`**, folder `/ (root)`.
@@ -89,8 +115,10 @@ npm run preview        # serve the production build locally
 4. Live at `https://<user>.github.io/<repo-name>/`.
 
 Notes:
+- GitHub Pages is static-only → the contact form there uses `mailto:` fallback, Formspree, or EmailJS (see "Contact form setup" above).
 - A **custom domain**? Set `Settings → Pages → Custom domain` and remove the `BASE_PATH` override (or set it to `/`) in `.github/workflows/deploy.yml`.
 - The repo name must match `BASE_PATH` — the workflow derives it from `github.event.repository.name` automatically.
+- Both platforms can coexist from this one repo — CF Git integration doesn't touch the `gh-pages` branch.
 
 ## Generate the AI persona portrait (one-time)
 
@@ -119,5 +147,5 @@ Weekly loop: batch 7 scripts (Gemini) → fact-check vs résumé → batch TTS �
 - [x] Every metric on the site (80%, 60%, 100%, 5+ yrs) matches the résumé
 - [x] Project descriptions extracted verbatim-in-substance from the résumé
 - [x] AI-presenter disclosure on hero, footer, and in every video spec
-- [x] Contact form verified end-to-end with EmailJS/Formspree (see above) — **re-test after setting your real credentials**
+- [x] Contact form verified across all routing modes (own CF function / Formspree / EmailJS / mailto) — **re-test after setting your real credentials**
 - [x] Build + SSR render smoke-tested

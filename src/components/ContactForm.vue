@@ -6,16 +6,19 @@ import Icon from './Icon.vue'
 import { inquiryTypes, CONTACT_EMAIL } from '../data/site.js'
 
 /**
- * Static-site email routing — no backend required.
+ * Static-site email routing — no backend required on GitHub Pages.
  *
  * Priority:
- *   1. Formspree   — if VITE_FORMSPREE_ENDPOINT is set (simplest option)
- *   2. EmailJS     — if VITE_EMAILJS_SERVICE_ID / _TEMPLATE_ID / _PUBLIC_KEY are set
- *   3. mailto:     — graceful fallback when neither is configured (dev preview)
+ *   1. own API        — if VITE_CONTACT_API is set (Cloudflare Pages Functions,
+ *                       functions/api/contact.js — server-side Resend relay)
+ *   2. Formspree      — if VITE_FORMSPREE_ENDPOINT is set
+ *   3. EmailJS        — if VITE_EMAILJS_SERVICE_ID / _TEMPLATE_ID / _PUBLIC_KEY are set
+ *   4. mailto:        — graceful fallback (pre-filled draft to the client's inbox)
  *
- * See README.md → "Contact form setup" for the 5-minute configuration walkthrough.
+ * See README.md → "Contact form routing" for the full configuration walkthrough.
  */
 const config = {
+  contactApi: import.meta.env.VITE_CONTACT_API ?? '',
   formspreeEndpoint: import.meta.env.VITE_FORMSPREE_ENDPOINT ?? '',
   serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID ?? '',
   templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID ?? '',
@@ -27,6 +30,7 @@ const config = {
 const isSet = (v) => !!v && !/x{4,}/i.test(v)
 
 const mode = computed(() => {
+  if (isSet(config.contactApi)) return 'api'
   if (isSet(config.formspreeEndpoint)) return 'formspree'
   if (isSet(config.serviceId) && isSet(config.templateId) && isSet(config.publicKey)) return 'emailjs'
   return 'mailto'
@@ -36,7 +40,8 @@ const form = reactive({
   name: '',
   email: '',
   type: inquiryTypes[0],
-  message: ''
+  message: '',
+  website: '' // honeypot — real users never fill this
 })
 
 const touched = reactive({ name: false, email: false, message: false })
@@ -68,7 +73,20 @@ async function submit() {
   errorMsg.value = ''
 
   try {
-    if (mode.value === 'formspree') {
+    if (mode.value === 'api') {
+      const res = await fetch(config.contactApi, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          inquiry_type: form.type,
+          message: form.message,
+          website: form.website
+        })
+      })
+      if (!res.ok) throw new Error(`Contact API responded ${res.status}`)
+    } else if (mode.value === 'formspree') {
       const res = await fetch(config.formspreeEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -107,6 +125,7 @@ async function submit() {
     form.email = ''
     form.type = inquiryTypes[0]
     form.message = ''
+    form.website = ''
     touched.name = touched.email = touched.message = false
   } catch (e) {
     status.value = 'error'
@@ -209,6 +228,15 @@ async function submit() {
             <p v-if="touched.message && errors.message" class="mt-1.5 text-xs text-rose-400">{{ errors.message }}</p>
           </div>
 
+          <input
+            type="text"
+            v-model="form.website"
+            name="website"
+            class="hidden"
+            tabindex="-1"
+            autocomplete="off"
+            aria-hidden="true"
+          />
           <button
             type="submit"
             :disabled="status === 'sending'"

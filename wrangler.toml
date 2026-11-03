@@ -1,0 +1,7 @@
+# Cloudflare Pages configuration — enables:
+#   npx wrangler pages dev      (local preview incl. functions/api/*)
+#   npx wrangler pages deploy   (direct upload deploy)
+# Git-integration builds (dashboard) only need: build `npm run build`, output `dist`.
+name = "ivanbuilds"
+compatibility_date = "2025-09-01"
+pages_build_output_dir = "dist"

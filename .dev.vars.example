@@ -1,0 +1,5 @@
+# Local secrets for `npx wrangler pages dev` (never commit the real .dev.vars).
+# Get a Resend key: https://resend.com → API Keys (free tier: 100 emails/day).
+RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxx"
+CONTACT_EMAIL="hvaneyeochonghan@gmail.com"
+CONTACT_FROM="IvanBuilds Site <onboarding@resend.dev>"

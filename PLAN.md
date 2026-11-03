@@ -50,11 +50,14 @@
 
 ## ⬜ NEXT ACTIONS — for Ivan (in order)
 
-### A. Launch the website (≈10 min)
+### A. Launch the website (≈15 min — hosting choice)
 
-- [ ] **1. Contact form — current setup (mailto direct to your inbox) is live as-is.** Optional upgrade: Formspree free tier so visitors *without* a configured mail app can also submit (create a form at formspree.io → add repo secret `VITE_FORMSPREE_ENDPOINT`) — recommended for a lead-gen site
-- [ ] **2. Push and deploy:** `git push origin main` → workflow publishes `dist/` to `gh-pages` → repo **Settings → Pages → Source: `gh-pages` branch** → confirm live URL `https://hypertun.github.io/Persona1/`
-- [ ] **3. Test the funnel on the live site** — submit a test inquiry → confirm the mailto draft (or Formspree email if configured) arrives at hvaneyeochonghan@gmail.com
+**Recommended: Cloudflare Pages** — same free static hosting, but it includes a free serverless function (`functions/api/contact.js`, built ✅) that sends the contact form **directly to your inbox** via Resend with the API key kept server-side — the setup you wanted, which GitHub Pages can't do. Also: root-domain serving (no base-path config), preview URLs per branch, edge CDN with a Singapore PoP.
+
+- [ ] **1. Cloudflare deploy** — dashboard → **Workers & Pages → Create → Pages → Connect to Git** → this repo (build `npm run build`, output `dist` — auto-detected) → build vars: `VITE_CONTACT_API=/api/contact` → runtime vars/secrets: `RESEND_API_KEY` (create free at [resend.com](https://resend.com) → 3,000 emails/mo), `CONTACT_EMAIL` = your inbox, optional `CONTACT_FROM` = verified sender → live at `https://ivanbuilds.pages.dev`
+- [ ] **2. Test the funnel on the live site** — submit a test inquiry → confirm it arrives at hvaneyeochonghan@gmail.com (function logs: CF dashboard → Pages project → Functions → logs)
+- [ ] **3. (Alternative: GitHub Pages)** — works from the same repo via `deploy.yml` → `git push origin main` → repo **Settings → Pages → Source: `gh-pages` branch** → live at `https://hypertun.github.io/Persona1/` — but the form there uses mailto/Formspree/EmailJS (no serverless function available on GH Pages)
+- [ ] **4. (Optional custom domain)** — add `ivanbuilds.dev` (or similar) in Cloudflare → Custom domains; also verify the domain in Resend for production email sending (until verified, the free tier can only deliver to your own account address)
 
 ### B. Set up the AI generation pipeline (≈30 min, one-time)
 
@@ -68,7 +71,8 @@
 - [ ] **8. Post Day 1 video** ("Cloud-native systems. Measurable results.") → enable each platform's AI-content label + keep the "AI presenter" watermark → set "link in bio" to the live site
 - [ ] **9. Run the weekly loop** — batch 7 scripts → TTS → renders → edit → schedule daily (rhythm & times in `docs/02` §1 & §5)
 - [ ] **10. Day 30 review** — check KPIs vs targets (`docs/02` §6); clone top-3 formats, retire bottom-3; adjust posting times using platform analytics
-- [ ] **11. Every posting session** — one-click funnel test: confirm "link in bio" → site → contact form all still work end-to-end
+- [ ] **11. Every posting session** — one-click funnel test: confirm "link in bio" → site → contact form all still work end-to-end (on Cloudflare: also check the function logs)
+- [ ] **12. (Optional) Upgrade: Cloudflare Turnstile on the form + D1/KV lead storage** — free; the function is yours to extend
 
 ---
 
@@ -78,6 +82,6 @@
 |---|---|
 | 1 — Persona development | ✅ 100% |
 | 2 — Web development | ✅ 100% (media: placeholder avatar) |
-| 3 — Content pipeline | ✅ docs/tools 100% · ⬜ media generation pending (actions #4–#5) |
-| 4 — Review & handoff | ✅ 100% (re-verify form after #2/#3) |
-| **Your remaining work** | **11 checklist items above (~45 min setup, then a weekly cadence)** |
+| 3 — Content pipeline | ✅ docs/tools 100% · ⬜ media generation pending (actions #5–#6) |
+| 4 — Review & handoff | ✅ 100% (re-verify form after #1–#2) |
+| **Your remaining work** | **12 checklist items above (~45 min setup, then a weekly cadence)** |

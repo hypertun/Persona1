@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 4173"
+    "preview": "vite preview --port 4173",
+    "test": "node tests/test-contact-function.mjs && node tests/test-contact-api-mode.mjs",
+    "dev:cf": "npm run build && npx wrangler pages dev"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
