@@ -6,7 +6,7 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 |---|---|
 | Website | Vue 3 (Vite) + Tailwind CSS 4 |
 | Hosting | **Cloudflare Pages** (recommended — adds a free serverless function) *or* GitHub Pages |
-| Contact form | Own CF Pages Function (`/api/contact` → Telegram message to your phone) · mailto fallback when absent — auto-detected |
+| Contact form | Own CF Pages Function (`/api/contact` → Telegram message to your phone) — the single path; site never sends email |
 | Content pipeline | Gemini 1.5 Pro (scripts) · Vertex AI TTS (voiceover) · Imagen 3 (persona visuals) · HeyGen/Synthesia (avatar animation) |
 
 > ⚠️ **Content integrity rule:** every claim on the site and in every video must trace back to the résumé (*48451 – Senior Consultant Developer – Ivan Yeo.docx.pdf*). The data module `src/data/site.js` is the single source of truth — do not add unbacked claims.
@@ -50,21 +50,16 @@ npm run preview        # serve the production build locally
 
 ## Contact form routing (priority order)
 
-The form auto-detects its routing mode from the build environment — highest priority first.
+The form has exactly one delivery path — no modes, no flags, no email.
 
-### Mode 1 — Own Cloudflare Pages Function (the delivery path)
-`functions/api/contact.js` receives the POST at `/api/contact` and delivers the inquiry to your phone as a **Telegram message** — that's the only path: every submission arrives in your Telegram chat, with a tappable "Reply to &lt;lead&gt;" mailto link (replies are composed from your Gmail, but the site never touches email). Credentials never appear in the client bundle — they're Cloudflare secrets. Activate with the build variable `VITE_CONTACT_API=/api/contact` — full setup in "Deploy to Cloudflare Pages" below.
-
-### Mode 2 — mailto fallback (automatic, only when the flag is absent)
-Without the flag (e.g. a plain local dev or a GitHub Pages deploy without the function), submitting opens the visitor's email app with a pre-filled draft to your inbox (`VITE_CONTACT_EMAIL`, default baked into `src/data/site.js`). On a properly configured Cloudflare deploy this branch never runs. Junk values (e.g. a placeholder left in a dashboard build var) are ignored automatically.
+### /api/contact → Cloudflare Function → Telegram
+`functions/api/contact.js` receives the POST and delivers the inquiry to your phone as a **Telegram message**, with a tappable "Reply to &lt;lead&gt;" mailto link (replies are composed from your Gmail, but the site never sends email). Credentials never appear in the client bundle — they're Cloudflare secrets. If the function or its secrets are missing (e.g. a plain `npm run dev`, or a GitHub Pages deploy), the form shows an honest error banner with the owner's direct email as the manual path — it never silently falls back to sending an email draft.
 
 ### Test the integration
 
-> **Which mode am I in?** The submit button tells you: **"Send inquiry"** = the Cloudflare function (Telegram delivery) is wired up; **"Open email draft"** = the build lacks `VITE_CONTACT_API`, so the mailto fallback is active (e.g. plain `npm run dev`). Note that only `wrangler` (via `npm run dev:cf`) can serve the `/api/contact` function locally — plain Vite dev can't.
-
-1. `npm run dev:cf` → submit a test inquiry from the served site.
+1. `npm run dev:cf` → submit a test inquiry from the served site (only wrangler can serve the `/api/contact` function locally — plain Vite dev can't).
 2. Confirm the Telegram message arrives on your phone (bot logs: `https://api.telegram.org/bot<TOKEN>/getUpdates`, or the Cloudflare function logs).
-3. In production, Cloudflare builds bake the flag from the build env var — no repo secrets needed beyond `VITE_CONTACT_API` (optional) and `VITE_CONTACT_EMAIL`.
+3. In production: no build variables are required at all (optional `VITE_CONTACT_EMAIL` overrides the public contact address shown on the site).
 
 ## Deploy to Cloudflare Pages (recommended — the full funnel)
 
@@ -72,9 +67,7 @@ Without the flag (e.g. a plain local dev or a GitHub Pages deploy without the fu
 
 1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git** → select this repo.
 2. Build settings (auto-detected for Vite): build command `npm run build`, output `dist`.
-3. Build environment variables (Settings → Variables, **Production**):
-   - `VITE_CONTACT_API=/api/contact`
-   - `VITE_CONTACT_EMAIL=<your inbox>` (optional — defaults to the one in `src/data/site.js`)
+3. Build environment variables: **none required** — the form's endpoint is baked in. (Optional: `VITE_CONTACT_EMAIL` overrides the public contact address shown on the site; defaults to `src/data/site.js`.)
 4. Runtime secrets for the function (Settings → Variables & Secrets — server-side only):
    - `NOTIFY_TELEGRAM_TOKEN` — bot token: message [@BotFather](https://t.me/BotFather) → `/newbot` → copy the token
    - `NOTIFY_TELEGRAM_CHAT_ID` — your chat id: send your bot a "hi", then open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy the `chat.id`
@@ -85,7 +78,7 @@ Without the flag (e.g. a plain local dev or a GitHub Pages deploy without the fu
 **Test locally with the function:**
 ```bash
 cp .dev.vars.example .dev.vars   # add your bot token + chat id
-npm run dev:cf                   # builds with the flag, serves dist/ + /api/contact at localhost:8788
+npm run dev:cf                   # builds and serves dist/ + /api/contact at localhost:8788
 ```
 
 > Security notes: the bot token only exists server-side (never in the client bundle); submissions are validated and HTML-escaped in the function; a honeypot field filters bots; long messages are chunked within Telegram's 4096-char limit. Optional hardening: enable [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) (free) on the form.
@@ -98,7 +91,7 @@ npm run dev:cf                   # builds with the flag, serves dist/ + /api/con
 4. Live at `https://<user>.github.io/<repo-name>/`.
 
 Notes:
-- GitHub Pages is static-only → the contact form there falls back to the `mailto:` draft mode (see "Contact form routing" above).
+- GitHub Pages is static-only → the contact form shows the error banner there (no serverless function). The site is Cloudflare-first; on GitHub Pages the "email me directly" address remains the manual contact path.
 - A **custom domain**? Set `Settings → Pages → Custom domain` and remove the `BASE_PATH` override (or set it to `/`) in `.github/workflows/deploy.yml`.
 - The repo name must match `BASE_PATH` — the workflow derives it from `github.event.repository.name` automatically.
 - Both platforms can coexist from this one repo — CF Git integration doesn't touch the `gh-pages` branch.
@@ -130,5 +123,5 @@ Weekly loop: batch 7 scripts (Gemini) → fact-check vs résumé → batch TTS �
 - [x] Every metric on the site (80%, 60%, 100%, 5+ yrs) matches the résumé
 - [x] Project descriptions extracted verbatim-in-substance from the résumé
 - [x] AI-presenter disclosure on hero, footer, and in every video spec
-- [x] Contact form verified across its routing modes (CF function → Telegram / mailto fallback) — **re-test after setting your real bot credentials**
+- [x] Contact form verified end-to-end (POST → function → Telegram payload/chunking/escaping; honest error banner when the function is missing) — **re-test after setting your real bot credentials**
 - [x] Build + SSR render smoke-tested

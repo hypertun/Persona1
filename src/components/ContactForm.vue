@@ -5,27 +5,15 @@ import Icon from './Icon.vue'
 import { inquiryTypes, CONTACT_EMAIL } from '../data/site.js'
 
 /**
- * Inquiry routing — auto-detected at build time.
+ * Inquiry delivery — the single path: POST to the Cloudflare Pages Function
+ * (functions/api/contact.js), which sends the inquiry as a Telegram message
+ * to the site owner's phone. No email is sent by this site, ever.
  *
- *   1. api    — if VITE_CONTACT_API is set: POST to the Cloudflare Pages
- *               Function (functions/api/contact.js), which delivers the
- *               inquiry as a Telegram message to the site owner's phone.
- *   2. mailto — automatic fallback when the flag is absent (e.g. a GitHub
- *               Pages deploy without the function): opens the visitor's
- *               email app with a pre-filled draft to the owner's inbox.
- *
- * With the flag set on a Cloudflare deploy, the mailto branch never runs —
- * Telegram is the only delivery path.
+ * There is no configuration flag: if the function or its Telegram secrets
+ * are missing (e.g. plain `npm run dev` without wrangler), the submit shows
+ * the honest error banner with the owner's direct email as the manual path.
  */
-const config = {
-  contactApi: import.meta.env.VITE_CONTACT_API ?? ''
-}
-
-// Ignore placeholder-style values (e.g. "xxxxxxxx" left in a dashboard build
-// var) so the form never POSTs to a dead endpoint.
-const isSet = (v) => !!v && !/x{4,}/i.test(v)
-
-const mode = computed(() => (isSet(config.contactApi) ? 'api' : 'mailto'))
+const CONTACT_API = '/api/contact'
 
 const form = reactive({
   name: '',
@@ -48,13 +36,6 @@ const errors = computed(() => ({
     : ''
 }))
 const valid = computed(() => !errors.value.name && !errors.value.email && !errors.value.message)
-const submitLabel = computed(() => (mode.value === 'mailto' ? 'Open email draft' : 'Send inquiry'))
-
-function mailtoHref() {
-  const subject = `[Consulting inquiry] ${form.type} — from ${form.name}`
-  const body = `Name: ${form.name}\nEmail: ${form.email}\nInquiry: ${form.type}\n\n${form.message}`
-  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-}
 
 async function submit() {
   touched.name = touched.email = touched.message = true
@@ -64,25 +45,18 @@ async function submit() {
   errorMsg.value = ''
 
   try {
-    if (mode.value === 'api') {
-      const res = await fetch(config.contactApi, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          inquiry_type: form.type,
-          message: form.message,
-          website: form.website
-        })
+    const res = await fetch(CONTACT_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name,
+        email: form.email,
+        inquiry_type: form.type,
+        message: form.message,
+        website: form.website
       })
-      if (!res.ok) throw new Error(`Contact API responded ${res.status}`)
-    } else {
-      // Fallback: open the visitor's mail client with a pre-filled draft.
-      if (typeof window !== 'undefined') window.location.href = mailtoHref()
-      status.value = 'success'
-      return
-    }
+    })
+    if (!res.ok) throw new Error(`Contact API responded ${res.status}`)
 
     status.value = 'success'
     form.name = ''
@@ -208,15 +182,10 @@ async function submit() {
           >
             <template v-if="status === 'sending'">Sending…</template>
             <template v-else>
-              {{ submitLabel }}
+              Send inquiry
               <Icon name="arrow-right" class="h-4 w-4" />
             </template>
           </button>
-
-          <p v-if="mode === 'mailto'" class="text-center text-xs leading-relaxed text-slate-500">
-            Submitting opens your email app with a pre-filled draft addressed to me —
-            your inquiry goes straight to my inbox, nothing is stored anywhere else.
-          </p>
 
           <!-- Status banners -->
           <div
@@ -224,11 +193,7 @@ async function submit() {
             class="flex items-start gap-3 rounded-xl bg-emerald-400/10 p-4 text-sm text-emerald-300 ring-1 ring-emerald-400/30"
           >
             <Icon name="check" class="mt-0.5 h-4 w-4 shrink-0" />
-            <span v-if="mode === 'mailto'">
-              <strong>Your email app has opened with a pre-filled draft.</strong>
-              Just hit send and it lands in my inbox — I'll reply within one business day.
-            </span>
-            <span v-else>
+            <span>
               <strong>Message sent.</strong> Thanks for reaching out — I'll get back to you within
               one business day.
             </span>

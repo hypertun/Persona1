@@ -1,10 +1,8 @@
-// SSR integration test: ContactForm in Cloudflare "api" mode
-// (VITE_CONTACT_API=/api/contact) — mocks fetch to assert the POST payload.
+// SSR integration test: ContactForm — single delivery path (/api/contact →
+// Cloudflare Function → Telegram). No email, no fallback modes, no flags:
+// the form always POSTs to /api/contact and surfaces an honest error banner
+// (with the owner's direct email) when the function is unreachable.
 import assert from 'node:assert/strict'
-
-// Set env BEFORE the Vite server compiles the component (import.meta.env injection)
-process.env.VITE_CONTACT_API = '/api/contact'
-process.env.VITE_CONTACT_EMAIL = 'hvaneyeochonghan@gmail.com'
 
 const { createServer } = await import('vite')
 
@@ -28,7 +26,7 @@ app.mixin({
     if (this.$options.__name === 'ContactForm') instance = this
   }
 })
-await renderToString(app)
+const html = await renderToString(app)
 const s = instance.$.setupState
 
 const results = []
@@ -38,32 +36,14 @@ const test = (name, fn) =>
     process.exitCode = 1
   })
 
-// 1. Mode detection
-await test('mode is "api" when VITE_CONTACT_API is set', async () => {
-  assert.equal(s.mode, 'api')
-  assert.equal(s.submitLabel, 'Send inquiry')
+// 1. Rendered form: single path — "Send inquiry" button, no mailto-draft copy
+await test('renders the Telegram-path form (Send inquiry, no email-draft copy)', async () => {
+  assert.ok(html.includes('Send inquiry'), 'button says Send inquiry')
+  assert.ok(!html.includes('Open email draft'), 'no mailto-mode button label')
+  assert.ok(!html.includes('email app has opened'), 'no mailto success copy')
 })
 
-// 2. Placeholder values ignored — a value of "xxxxxxxx" must not activate api mode
-// (regression: a junk dashboard value must never activate a mode)
-await test('placeholder VITE_CONTACT_API (xxxxxxxx) falls back to mailto', async () => {
-  assert.equal(typeof s.submit, 'function')
-  process.env.VITE_CONTACT_API = 'https://api.xxxxxxxxxxxxxxxx'
-  const server2 = await createServer({
-    root: process.cwd(), server: { middlewareMode: true }, appType: 'custom', logLevel: 'silent'
-  })
-  const mod2 = await server2.ssrLoadModule('/src/components/ContactForm.vue')
-  let inst2 = null
-  const app2 = Vue.createApp({ render: () => Vue.h(mod2.default ?? mod2) })
-  app2.mixin({ created() { if (this.$options.__name === 'ContactForm') inst2 = this } })
-  await renderToString(app2)
-  assert.equal(inst2.$.setupState.mode, 'mailto', 'placeholder endpoint must not activate api mode')
-  assert.equal(inst2.$.setupState.submitLabel, 'Open email draft')
-  await server2.close()
-  process.env.VITE_CONTACT_API = '/api/contact'
-})
-
-// 3. Valid submit → POSTs JSON to the endpoint with honeypot field
+// 2. Valid submit → POSTs JSON to /api/contact with honeypot field
 let captured = []
 const realFetch = globalThis.fetch
 globalThis.fetch = async (url, init) => {
@@ -72,31 +52,31 @@ globalThis.fetch = async (url, init) => {
 }
 s.form.name = 'Jane Tan'
 s.form.email = 'jane@acme.com'
-s.form.type = 'Cloud architecture review'
-s.form.message = 'We need a review of our AWS architecture and a modernization roadmap.'
+s.form.type = 'Architecture & Modernization'
+s.form.message = 'We need a review of our architecture and a modernization roadmap.'
 await s.submit()
 await new Promise((r) => setTimeout(r, 10))
 
-await test('submit POSTs to VITE_CONTACT_API with full payload + honeypot', async () => {
+await test('submit POSTs to /api/contact with full payload + honeypot', async () => {
   assert.equal(captured.length, 1)
   assert.equal(captured[0].url, '/api/contact')
   assert.equal(captured[0].init.method, 'POST')
   const payload = JSON.parse(captured[0].init.body)
   assert.equal(payload.name, 'Jane Tan')
   assert.equal(payload.email, 'jane@acme.com')
-  assert.equal(payload.inquiry_type, 'Cloud architecture review')
+  assert.equal(payload.inquiry_type, 'Architecture & Modernization')
   assert.equal(typeof payload.website, 'string', 'honeypot field must be sent')
 })
 
-// 4. Success state + form reset
-await test('success state set and form reset after api send', async () => {
+// 3. Success state + form reset
+await test('success state set and form reset after send', async () => {
   assert.equal(s.status, 'success')
   assert.equal(s.form.name, '')
   assert.equal(s.form.message, '')
   assert.equal(s.form.website, '')
 })
 
-// 5. Relay failure (502) → error state with direct email fallback text
+// 4. Function failure (502) → error banner with direct email as manual path
 captured = []
 globalThis.fetch = async () => new Response('upstream', { status: 502 })
 s.form.name = 'Jane Tan'
@@ -104,12 +84,28 @@ s.form.email = 'jane@acme.com'
 s.form.message = 'Another valid inquiry message over twenty characters long.'
 await s.submit()
 await new Promise((r) => setTimeout(r, 10))
-await test('api 502 → error banner with direct email address', async () => {
+await test('function 502 → error banner with direct email address', async () => {
   assert.equal(s.status, 'error')
   assert.ok(s.errorMsg.includes('hvaneyeochonghan@gmail.com'))
 })
 
-// 6. Validation still blocks short messages client-side (no fetch)
+// 5. No function at all (plain local dev: 404) → same honest error, never a draft
+captured = []
+globalThis.fetch = async (url, init) => {
+  captured.push({ url: String(url), init })
+  return new Response('not found', { status: 404 })
+}
+s.form.name = 'Jane Tan'
+s.form.email = 'jane@acme.com'
+s.form.message = 'A third valid inquiry message over twenty characters long.'
+await s.submit()
+await new Promise((r) => setTimeout(r, 10))
+await test('missing function (404) → error banner, no silent email fallback', async () => {
+  assert.equal(s.status, 'error')
+  assert.equal(captured.length, 1)
+})
+
+// 6. Validation still blocks short messages client-side (no POST)
 captured = []
 s.form.name = 'Jane'
 s.form.email = 'jane@acme.com'
@@ -117,7 +113,6 @@ s.form.message = 'short'
 await s.submit()
 await new Promise((r) => setTimeout(r, 10))
 await test('client validation blocks short message — no POST sent', async () => {
-  assert.equal(s.status, 'error') // still in error state from before — but crucially:
   assert.equal(captured.length, 0, 'must not POST an invalid form')
 })
 
@@ -125,4 +120,4 @@ globalThis.fetch = realFetch
 await server.close()
 
 console.log(results.join('\n'))
-console.log(`\n${process.exitCode ? 'FAILED' : 'PASSED'}: ${results.filter((r) => r.startsWith('✅')).length}/${results.length} api-mode tests`)
+console.log(`\n${process.exitCode ? 'FAILED' : 'PASSED'}: ${results.filter((r) => r.startsWith('✅')).length}/${results.length} contact-form tests`)

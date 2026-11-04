@@ -1,8 +1,7 @@
 # Local secrets for `npx wrangler pages dev` (never commit the real .dev.vars).
 # SERVER-side values — these run in the Cloudflare function runtime and never
 # reach the browser bundle. (The client-side site needs no env file at all:
-# all client config has safe defaults baked into src/data/site.js, and
-# `npm run dev:cf` injects VITE_CONTACT_API automatically.)
+# all client config has safe defaults baked into src/data/site.js.)
 #
 # Telegram is the ONLY delivery path for contact-form inquiries:
 # every submission arrives on your phone as a Telegram message.
@@ -11,5 +10,8 @@
 #   1. Message @BotFather (https://t.me/BotFather) → /newbot → copy the bot token
 #   2. Send your new bot any message (e.g. "hi")
 #   3. Open https://api.telegram.org/bot<TOKEN>/getUpdates → copy chat.id
+#
+# Then: cp .dev.vars.example .dev.vars   ← put the REAL values in .dev.vars
+# (.dev.vars is gitignored; this template stays committed with empty values)
 NOTIFY_TELEGRAM_TOKEN=""
 NOTIFY_TELEGRAM_CHAT_ID=""
