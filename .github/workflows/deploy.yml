@@ -33,7 +33,7 @@ jobs:
         env:
           # GitHub Pages project sites are served from /<repo-name>/
           BASE_PATH: /${{ github.event.repository.name }}/
-          VITE_CONTACT_API: ${{ secrets.VITE_CONTACT_API }}
+          # Optional: override the public contact address (defaults to src/data/site.js)
           VITE_CONTACT_EMAIL: ${{ secrets.VITE_CONTACT_EMAIL }}
 
       - name: Deploy dist/ to gh-pages branch

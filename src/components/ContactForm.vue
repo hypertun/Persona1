@@ -21,8 +21,8 @@ const config = {
   contactApi: import.meta.env.VITE_CONTACT_API ?? ''
 }
 
-// Ignore leftover template placeholders from .env.example ("xxxxxxxx")
-// so the form never POSTs to a dead endpoint.
+// Ignore placeholder-style values (e.g. "xxxxxxxx" left in a dashboard build
+// var) so the form never POSTs to a dead endpoint.
 const isSet = (v) => !!v && !/x{4,}/i.test(v)
 
 const mode = computed(() => (isSet(config.contactApi) ? 'api' : 'mailto'))

@@ -44,8 +44,8 @@ await test('mode is "api" when VITE_CONTACT_API is set', async () => {
   assert.equal(s.submitLabel, 'Send inquiry')
 })
 
-// 2. Placeholder values ignored — api endpoint of "xxxxxxxx" must not activate api mode
-// (regression: a leftover .env.example value must never activate a mode)
+// 2. Placeholder values ignored — a value of "xxxxxxxx" must not activate api mode
+// (regression: a junk dashboard value must never activate a mode)
 await test('placeholder VITE_CONTACT_API (xxxxxxxx) falls back to mailto', async () => {
   assert.equal(typeof s.submit, 'function')
   process.env.VITE_CONTACT_API = 'https://api.xxxxxxxxxxxxxxxx'

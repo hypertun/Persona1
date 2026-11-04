@@ -56,7 +56,7 @@ The form auto-detects its routing mode from the build environment — highest pr
 `functions/api/contact.js` receives the POST at `/api/contact` and delivers the inquiry to your phone as a **Telegram message** — that's the only path: every submission arrives in your Telegram chat, with a tappable "Reply to &lt;lead&gt;" mailto link (replies are composed from your Gmail, but the site never touches email). Credentials never appear in the client bundle — they're Cloudflare secrets. Activate with the build variable `VITE_CONTACT_API=/api/contact` — full setup in "Deploy to Cloudflare Pages" below.
 
 ### Mode 2 — mailto fallback (automatic, only when the flag is absent)
-Without the flag (e.g. a plain local dev or a GitHub Pages deploy without the function), submitting opens the visitor's email app with a pre-filled draft to your inbox (`VITE_CONTACT_EMAIL`, default baked into `src/data/site.js`). On a properly configured Cloudflare deploy this branch never runs. Placeholder values (e.g. `xxxxxxxx` left from `.env.example`) are ignored automatically.
+Without the flag (e.g. a plain local dev or a GitHub Pages deploy without the function), submitting opens the visitor's email app with a pre-filled draft to your inbox (`VITE_CONTACT_EMAIL`, default baked into `src/data/site.js`). On a properly configured Cloudflare deploy this branch never runs. Junk values (e.g. a placeholder left in a dashboard build var) are ignored automatically.
 
 ### Test the integration
 

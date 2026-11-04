@@ -23,7 +23,7 @@
 - [x] Inquiry delivery — Cloudflare Pages Function (`functions/api/contact.js`): form → `/api/contact` → **Telegram message to your phone** (the only delivery path), with automatic `mailto:` draft fallback when the function flag is absent; bot token + chat id stay server-side, honeypot + validation + HTML-escaping server-side
 - [x] Extra sections for lead-gen: sticky nav, metrics bar, services, open source, skills/certs, footer
 - [x] `deploy.yml` GitHub Action — `npm ci` → build with `BASE_PATH=/<repo>/` → publish `dist/` to the **`gh-pages`** branch
-- [x] `.env.example` + GitHub secrets wiring in workflow
+- [x] Client env wiring in CI workflow (optional secret overrides; defaults baked into `src/data/site.js`)
 - [x] Production build verified (107 KB JS / 40 KB gzip) + SSR render smoke test + `BASE_PATH` build test
 
 ## Phase 3 — Content Generation Pipeline · ✅ DOCS & TOOLS COMPLETE · ⬜ MEDIA ASSETS PENDING
@@ -44,7 +44,7 @@
 - [x] Verify all claims strictly match the résumé — **automated audit: 30/30 claims traced to the PDF** (metrics, roles, projects, stacks, certifications)
 - [x] Test inquiry delivery — functional tests passing (mode detection, validation blocking, correct JSON payload POST, Telegram payload + chunking + escaping, success/error/reset states; error paths handled gracefully)
 - [x] Finalized codebase, deployment instructions (`README.md`), and first 5 social scripts committed
-- [x] Contact mode set to `mailto:` direct-to-inbox with real address baked in (`src/data/site.js` + `.env`)
+- [x] Contact mode fallback set with real address baked in (`src/data/site.js`)
 
 ---
 

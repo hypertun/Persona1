@@ -1,6 +1,8 @@
 # Local secrets for `npx wrangler pages dev` (never commit the real .dev.vars).
-# SERVER-side counterpart to .env — these values run in the Cloudflare
-# function runtime and never reach the browser bundle.
+# SERVER-side values — these run in the Cloudflare function runtime and never
+# reach the browser bundle. (The client-side site needs no env file at all:
+# all client config has safe defaults baked into src/data/site.js, and
+# `npm run dev:cf` injects VITE_CONTACT_API automatically.)
 #
 # Telegram is the ONLY delivery path for contact-form inquiries:
 # every submission arrives on your phone as a Telegram message.
