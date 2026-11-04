@@ -1,0 +1,40 @@
+# CI — runs the full test suite + build smoke test on every push/PR to main.
+# Guards the Cloudflare Pages deploy: the site is built from this branch, so a
+# red build here means the live funnel is at risk. No secrets needed — the
+# tests use a simulated Telegram API and the function validates config itself.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Tests (17) — Telegram function + form behaviour
+        run: npm test
+
+      - name: Build smoke test
+        run: npm run build
+
+      - name: Upload dist artifact (optional debugging aid)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
