@@ -54,8 +54,8 @@
 
 **Recommended: Cloudflare Workers** — Workers with static assets is Cloudflare's current platform (Pages is in maintenance mode): free serverless function (`src/worker.js` → `src/contact.js`, built ✅) that delivers every contact-form submission to your phone as a **Telegram message** — the only delivery path. Two server-side secrets, nothing else; replies to leads are composed from Gmail via the tappable mailto link. Also: root-domain serving (no base-path config), preview URLs per branch, edge CDN with a Singapore PoP.
 
-- [ ] **1. Cloudflare deploy** — dashboard → **Workers & Pages → Create → Connect to Git** → this repo (name `ivanbuilds`; build `npm run build`, deploy `npx wrangler deploy`, preview `npx wrangler deploy` — the pipeline's injected token natively supports wrangler deploy) → runtime secrets: `NOTIFY_TELEGRAM_TOKEN` + `NOTIFY_TELEGRAM_CHAT_ID` (2-min setup: [@BotFather](https://t.me/BotFather) → `/newbot` → copy token; message the bot, then open `https://api.telegram.org/bot<TOKEN>/getUpdates` → copy `chat.id`) → live at `https://ivanbuilds.<account>.workers.dev`
-- [ ] **2. Test the funnel on the live site** — submit a test inquiry → confirm the Telegram message arrives on your phone (tap "Reply to…" → Gmail compose opens) (worker logs: CF dashboard → project → Logs)
+- [x] **1. Cloudflare deploy** — ✅ done: live at https://ivanbuilds.ivangemini930.workers.dev (Workers + static assets; build `npm run build`, deploy `npx wrangler deploy`)
+- [x] **2. Funnel verified live** — ✅ production POST → `200 {"ok":true}` → Telegram ping delivered; still worth one manual browser-form pass (visitor UX: green banner → phone ping → tap "Reply to…")
 - [ ] **3. (Alternative: GitHub Pages)** — works from the same repo via `deploy.yml` → `git push origin main` → repo **Settings → Pages → Source: `gh-pages` branch** → live at `https://hypertun.github.io/Persona1/` — but the form there falls back to the mailto draft (no serverless function available on GH Pages)
 - [ ] **4. (Optional custom domain)** — add `ivanbuilds.dev` (or similar) in Cloudflare → Custom domains
 
