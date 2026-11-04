@@ -20,7 +20,7 @@
 - [x] `HeroSection.vue` — AI-influencer portrait slot (Imagen 3 render + SVG placeholder fallback), value proposition from the résumé, CTAs
 - [x] `Portfolio.vue` — all 5 résumé projects mapped with roles, periods, highlights, tech stacks, and result badges (Happy Hour Games, NTUC NE Digital, Shopee, EP One, Infineon)
 - [x] `ContactForm.vue` — Name / Email / Inquiry type / Message with full client-side validation
-- [x] Inquiry delivery — Cloudflare Pages Function (`functions/api/contact.js`): form → `/api/contact` → **Telegram message to your phone** (the only delivery path), with automatic `mailto:` draft fallback when the function flag is absent; bot token + chat id stay server-side, honeypot + validation + HTML-escaping server-side
+- [x] Inquiry delivery — Cloudflare Worker (`src/worker.js` + `src/contact.js`): form → `/api/contact` → **Telegram message to your phone** (the only delivery path, no email fallback — if delivery is impossible the form shows an honest error banner); bot token + chat id stay server-side, honeypot + validation + HTML-escaping server-side
 - [x] Extra sections for lead-gen: sticky nav, metrics bar, services, open source, skills/certs, footer
 - [x] `deploy.yml` GitHub Action — `npm ci` → build with `BASE_PATH=/<repo>/` → publish `dist/` to the **`gh-pages`** branch
 - [x] Client env wiring in CI workflow (optional secret overrides; defaults baked into `src/data/site.js`)
@@ -52,10 +52,10 @@
 
 ### A. Launch the website (≈15 min — hosting choice)
 
-**Recommended: Cloudflare Pages** — same free static hosting, but it includes a free serverless function (`functions/api/contact.js`, built ✅) that delivers every contact-form submission to your phone as a **Telegram message** — the only delivery path. Two server-side secrets, nothing else; replies to leads are composed from Gmail via the tappable mailto link. Also: root-domain serving (no base-path config), preview URLs per branch, edge CDN with a Singapore PoP.
+**Recommended: Cloudflare Workers** — Workers with static assets is Cloudflare's current platform (Pages is in maintenance mode): free serverless function (`src/worker.js` → `src/contact.js`, built ✅) that delivers every contact-form submission to your phone as a **Telegram message** — the only delivery path. Two server-side secrets, nothing else; replies to leads are composed from Gmail via the tappable mailto link. Also: root-domain serving (no base-path config), preview URLs per branch, edge CDN with a Singapore PoP.
 
-- [ ] **1. Cloudflare deploy** — dashboard → **Workers & Pages → Create → Pages → Connect to Git** → this repo (build `npm run build`, output `dist` — auto-detected; no build variables required) → runtime secrets: `NOTIFY_TELEGRAM_TOKEN` + `NOTIFY_TELEGRAM_CHAT_ID` (2-min setup: [@BotFather](https://t.me/BotFather) → `/newbot` → copy token; message the bot, then open `https://api.telegram.org/bot<TOKEN>/getUpdates` → copy `chat.id`) → live at `https://ivanbuilds.pages.dev`
-- [ ] **2. Test the funnel on the live site** — submit a test inquiry → confirm the Telegram message arrives on your phone (tap "Reply to…" → Gmail compose opens) (function logs: CF dashboard → Pages project → Functions → logs)
+- [ ] **1. Cloudflare deploy** — dashboard → **Workers & Pages → Create → Connect to Git** → this repo (name `ivanbuilds`; build `npm run build`, deploy `npx wrangler deploy`, preview `npx wrangler deploy` — the pipeline's injected token natively supports wrangler deploy) → runtime secrets: `NOTIFY_TELEGRAM_TOKEN` + `NOTIFY_TELEGRAM_CHAT_ID` (2-min setup: [@BotFather](https://t.me/BotFather) → `/newbot` → copy token; message the bot, then open `https://api.telegram.org/bot<TOKEN>/getUpdates` → copy `chat.id`) → live at `https://ivanbuilds.<account>.workers.dev`
+- [ ] **2. Test the funnel on the live site** — submit a test inquiry → confirm the Telegram message arrives on your phone (tap "Reply to…" → Gmail compose opens) (worker logs: CF dashboard → project → Logs)
 - [ ] **3. (Alternative: GitHub Pages)** — works from the same repo via `deploy.yml` → `git push origin main` → repo **Settings → Pages → Source: `gh-pages` branch** → live at `https://hypertun.github.io/Persona1/` — but the form there falls back to the mailto draft (no serverless function available on GH Pages)
 - [ ] **4. (Optional custom domain)** — add `ivanbuilds.dev` (or similar) in Cloudflare → Custom domains
 

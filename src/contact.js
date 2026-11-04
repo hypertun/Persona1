@@ -1,11 +1,10 @@
-// Cloudflare Pages Function — POST /api/contact
+// Contact API — POST /api/contact (invoked by src/worker.js).
 //
 // The single delivery path for contact-form submissions: a Telegram message
 // to Ivan's phone. Inquiries arrive ONLY as a Telegram ping; replies to leads
 // are composed from Gmail (one tap on the mailto: link in the message).
 //
-// Environment variables (Cloudflare dashboard → Settings → Variables & Secrets,
-// or .dev.vars for local `npx wrangler pages dev`):
+// Runs in the Cloudflare Workers runtime. Secrets:
 //   NOTIFY_TELEGRAM_TOKEN   – bot token from @BotFather (https://t.me/BotFather)
 //   NOTIFY_TELEGRAM_CHAT_ID – your chat id (message the bot, then open
 //                             https://api.telegram.org/bot<TOKEN>/getUpdates)
@@ -33,9 +32,7 @@ const json = (body, status = 200) =>
     headers: { 'Content-Type': 'application/json' }
   })
 
-export async function onRequestPost(context) {
-  const { request, env } = context
-
+export async function handleContactPost(request, env) {
   let data
   try {
     data = await request.json()

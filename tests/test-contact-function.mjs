@@ -1,9 +1,10 @@
-// Unit tests for functions/api/contact.js (Cloudflare Pages Function)
+// Unit tests for src/contact.js + src/worker.js (Cloudflare Workers runtime)
 // Runs on plain Node (18+) — Request/Response/fetch are Web-standard globals.
 // The Telegram API call is mocked to assert the exact delivered payload.
 import assert from 'node:assert/strict'
 
-const { onRequestPost } = await import('../functions/api/contact.js')
+const { handleContactPost } = await import('../src/contact.js')
+const worker = (await import('../src/worker.js')).default
 
 const ENV = {
   NOTIFY_TELEGRAM_TOKEN: 'tg-token',
@@ -23,7 +24,7 @@ function post(body) {
     headers: { 'Content-Type': 'application/json' },
     body: typeof body === 'string' ? body : JSON.stringify(body)
   })
-  return onRequestPost({ request, env: { ...ENV } })
+  return handleContactPost(request, { ...ENV })
 }
 
 const valid = {
@@ -137,7 +138,7 @@ await test('no NOTIFY_TELEGRAM_* secrets → 500 relay_not_configured', async ()
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(valid)
   })
-  const res = await onRequestPost({ request, env: { CONTACT_EMAIL: 'a@b.co' } })
+  const res = await handleContactPost(request, { CONTACT_EMAIL: 'a@b.co' })
   assert.equal(res.status, 500)
   assert.equal((await res.json()).error, 'relay_not_configured')
   assert.equal(fetchCalls.length, 0)
@@ -167,6 +168,21 @@ await test('mid-delivery chunk failure → 502, no ok:true lie', async () => {
   const res = await post(long)
   assert.equal(res.status, 502)
   globalThis.fetch = realFetch
+})
+
+// 12–13. Worker router (src/worker.js): method guard + static asset passthrough
+await test('GET /api/contact → 405 method_not_allowed', async () => {
+  const res = await worker.fetch(new Request('https://ivanbuilds.example/api/contact'), {})
+  assert.equal(res.status, 405)
+  assert.equal((await res.json()).error, 'method_not_allowed')
+})
+
+await test('non-API paths → served from static assets (dist/)', async () => {
+  const res = await worker.fetch(new Request('https://ivanbuilds.example/'), {
+    ASSETS: { fetch: async () => new Response('asset-ok') }
+  })
+  assert.equal(res.status, 200)
+  assert.equal(await res.text(), 'asset-ok')
 })
 
 globalThis.fetch = realFetch

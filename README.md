@@ -5,8 +5,8 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 | Layer | Stack |
 |---|---|
 | Website | Vue 3 (Vite) + Tailwind CSS 4 |
-| Hosting | **Cloudflare Pages** (recommended — adds a free serverless function) *or* GitHub Pages |
-| Contact form | Own CF Pages Function (`/api/contact` → Telegram message to your phone) — the single path; site never sends email |
+| Hosting | **Cloudflare Workers** (static assets + serverless API, recommended) *or* GitHub Pages |
+| Contact form | Own CF Worker (`/api/contact` → Telegram message to your phone) — the single path; site never sends email |
 | Content pipeline | Gemini 1.5 Pro (scripts) · Vertex AI TTS (voiceover) · Imagen 3 (persona visuals) · HeyGen/Synthesia (avatar animation) |
 
 > ⚠️ **Content integrity rule:** every claim on the site and in every video must trace back to the résumé (*48451 – Senior Consultant Developer – Ivan Yeo.docx.pdf*). The data module `src/data/site.js` is the single source of truth — do not add unbacked claims.
@@ -17,8 +17,9 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 
 ```
 ├── .github/workflows/deploy.yml   # CI: build → deploy dist/ to gh-pages branch (GitHub Pages path)
-├── functions/api/contact.js       # Cloudflare Pages Function: /api/contact → Telegram delivery
-├── wrangler.toml                  # Cloudflare Pages config (wrangler dev / deploy)
+├── src/worker.js                 # Cloudflare Worker: routes /api/contact, serves dist/ assets
+├── src/contact.js                # Contact API: /api/contact → Telegram delivery
+├── wrangler.toml                # Cloudflare Workers config (wrangler dev / deploy)
 ├── docs/
 │   ├── 01_AI_PERSONA.md           # Persona: name/handles, Imagen 3 blueprint, voice bible
 │   ├── 02_CONTENT_STRATEGY.md     # 30-day content calendar (TikTok/Reels/Shorts)
@@ -52,8 +53,8 @@ npm run preview        # serve the production build locally
 
 The form has exactly one delivery path — no modes, no flags, no email.
 
-### /api/contact → Cloudflare Function → Telegram
-`functions/api/contact.js` receives the POST and delivers the inquiry to your phone as a **Telegram message**, with a tappable "Reply to &lt;lead&gt;" mailto link (replies are composed from your Gmail, but the site never sends email). Credentials never appear in the client bundle — they're Cloudflare secrets. If the function or its secrets are missing (e.g. a plain `npm run dev`, or a GitHub Pages deploy), the form shows an honest error banner with the owner's direct email as the manual path — it never silently falls back to sending an email draft.
+### /api/contact → Cloudflare Worker → Telegram
+`src/worker.js` serves the static site and routes the POST to `src/contact.js`, which delivers the inquiry to your phone as a **Telegram message**, with a tappable "Reply to &lt;lead&gt;" mailto link (replies are composed from your Gmail, but the site never sends email). Credentials never appear in the client bundle — they're Cloudflare secrets. If the function or its secrets are missing (e.g. a plain `npm run dev`, or a GitHub Pages deploy), the form shows an honest error banner with the owner's direct email as the manual path — it never silently falls back to sending an email draft.
 
 ### Test the integration
 
@@ -61,24 +62,24 @@ The form has exactly one delivery path — no modes, no flags, no email.
 2. Confirm the Telegram message arrives on your phone (bot logs: `https://api.telegram.org/bot<TOKEN>/getUpdates`, or the Cloudflare function logs).
 3. In production: no build variables are required at all (optional `VITE_CONTACT_EMAIL` overrides the public contact address shown on the site).
 
-## Deploy to Cloudflare Pages (recommended — the full funnel)
+## Deploy to Cloudflare Workers (recommended — the full funnel)
 
-**Why:** identical free static hosting, but Cloudflare Pages includes **Pages Functions** (serverless, 100k req/day free) — the repo ships with `functions/api/contact.js`, which delivers every form submission to your phone as a Telegram message (server-side secrets, no email vendor, no public keys). Cloudflare also serves from the root domain (no `/Persona1/` base path) and gives every branch a preview URL.
+**Why:** Workers with static assets is Cloudflare's current recommended platform (new feature development lands on Workers; Pages is in maintenance mode). Free tier (100k req/day), server-side secrets, per-branch preview URLs, edge CDN. The repo's `src/worker.js` serves `dist/` and routes `POST /api/contact` → Telegram delivery via `src/contact.js`.
 
-1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git** → select this repo.
-2. Build settings (auto-detected for Vite): build command `npm run build`, output `dist`.
-3. Build environment variables: **none required** — the form's endpoint is baked in. (Optional: `VITE_CONTACT_EMAIL` overrides the public contact address shown on the site; defaults to `src/data/site.js`.)
-4. Runtime secrets for the function (Settings → Variables & Secrets — server-side only):
+1. Cloudflare dashboard → **Workers & Pages → Create → Connect to Git** (unified flow) → select this repo.
+2. Project name: **`ivanbuilds`** (matches `wrangler.toml`).
+3. Commands — **Build:** `npm run build` · **Deploy:** `npx wrangler deploy` · **Preview deploy:** `npx wrangler deploy`. The pipeline's own injected token is built for `wrangler deploy` — no custom API tokens needed. (This is why the project is a Worker, not a Pages project: the build pipeline's token can't deploy to the Pages API.)
+4. Runtime secrets (Settings → Variables and Secrets — server-side only):
    - `NOTIFY_TELEGRAM_TOKEN` — bot token: message [@BotFather](https://t.me/BotFather) → `/newbot` → copy the token
    - `NOTIFY_TELEGRAM_CHAT_ID` — your chat id: send your bot a "hi", then open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy the `chat.id`
 
    Every inquiry then arrives in your Telegram chat with the lead's message and a tappable "Reply to &lt;lead&gt;" link.
-5. Deploy. Live at `https://ivanbuilds.pages.dev` (or your custom domain → Custom domains → add).
+5. Deploy. Live at `https://ivanbuilds.<account>.workers.dev` → bind a custom domain under Settings → Domains & Routes.
 
 **Test locally with the function:**
 ```bash
 cp .dev.vars.example .dev.vars   # add your bot token + chat id
-npm run dev:cf                   # builds and serves dist/ + /api/contact at localhost:8788
+npm run dev:cf                   # builds and serves dist/ + /api/contact at localhost:8787
 ```
 
 > Security notes: the bot token only exists server-side (never in the client bundle); submissions are validated and HTML-escaped in the function; a honeypot field filters bots; long messages are chunked within Telegram's 4096-char limit. Optional hardening: enable [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/) (free) on the form.
