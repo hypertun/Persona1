@@ -59,6 +59,9 @@ The form auto-detects its routing mode from the build environment — highest pr
 Without the flag (e.g. a plain local dev or a GitHub Pages deploy without the function), submitting opens the visitor's email app with a pre-filled draft to your inbox (`VITE_CONTACT_EMAIL`, default baked into `src/data/site.js`). On a properly configured Cloudflare deploy this branch never runs. Placeholder values (e.g. `xxxxxxxx` left from `.env.example`) are ignored automatically.
 
 ### Test the integration
+
+> **Which mode am I in?** The submit button tells you: **"Send inquiry"** = the Cloudflare function (Telegram delivery) is wired up; **"Open email draft"** = the build lacks `VITE_CONTACT_API`, so the mailto fallback is active (e.g. plain `npm run dev`). Note that only `wrangler` (via `npm run dev:cf`) can serve the `/api/contact` function locally — plain Vite dev can't.
+
 1. `npm run dev:cf` → submit a test inquiry from the served site.
 2. Confirm the Telegram message arrives on your phone (bot logs: `https://api.telegram.org/bot<TOKEN>/getUpdates`, or the Cloudflare function logs).
 3. In production, Cloudflare builds bake the flag from the build env var — no repo secrets needed beyond `VITE_CONTACT_API` (optional) and `VITE_CONTACT_EMAIL`.
