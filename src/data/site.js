@@ -240,9 +240,9 @@ export const skillGroups = [
 ]
 
 export const inquiryTypes = [
-  'Cloud Architecture (AWS / GCP)',
-  'High-Performance Golang Backend',
-  'Frontend Engineering (React + TypeScript)',
+  'Architecture & Modernization',
+  'Backend / API Development',
+  'Frontend / Web Application',
   'QA Automation & Reliability',
   'AI-Augmented Workflows',
   'Other / Not sure yet'
