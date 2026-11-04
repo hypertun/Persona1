@@ -1,40 +1,31 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
-import emailjs from '@emailjs/browser'
 import SectionHeading from './SectionHeading.vue'
 import Icon from './Icon.vue'
 import { inquiryTypes, CONTACT_EMAIL } from '../data/site.js'
 
 /**
- * Static-site email routing — no backend required on GitHub Pages.
+ * Inquiry routing — auto-detected at build time.
  *
- * Priority:
- *   1. own API        — if VITE_CONTACT_API is set (Cloudflare Pages Functions,
- *                       functions/api/contact.js — server-side Resend relay)
- *   2. Formspree      — if VITE_FORMSPREE_ENDPOINT is set
- *   3. EmailJS        — if VITE_EMAILJS_SERVICE_ID / _TEMPLATE_ID / _PUBLIC_KEY are set
- *   4. mailto:        — graceful fallback (pre-filled draft to the client's inbox)
+ *   1. api    — if VITE_CONTACT_API is set: POST to the Cloudflare Pages
+ *               Function (functions/api/contact.js), which delivers the
+ *               inquiry as a Telegram message to the site owner's phone.
+ *   2. mailto — automatic fallback when the flag is absent (e.g. a GitHub
+ *               Pages deploy without the function): opens the visitor's
+ *               email app with a pre-filled draft to the owner's inbox.
  *
- * See README.md → "Contact form routing" for the full configuration walkthrough.
+ * With the flag set on a Cloudflare deploy, the mailto branch never runs —
+ * Telegram is the only delivery path.
  */
 const config = {
-  contactApi: import.meta.env.VITE_CONTACT_API ?? '',
-  formspreeEndpoint: import.meta.env.VITE_FORMSPREE_ENDPOINT ?? '',
-  serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID ?? '',
-  templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID ?? '',
-  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY ?? ''
+  contactApi: import.meta.env.VITE_CONTACT_API ?? ''
 }
 
 // Ignore leftover template placeholders from .env.example ("xxxxxxxx")
 // so the form never POSTs to a dead endpoint.
 const isSet = (v) => !!v && !/x{4,}/i.test(v)
 
-const mode = computed(() => {
-  if (isSet(config.contactApi)) return 'api'
-  if (isSet(config.formspreeEndpoint)) return 'formspree'
-  if (isSet(config.serviceId) && isSet(config.templateId) && isSet(config.publicKey)) return 'emailjs'
-  return 'mailto'
-})
+const mode = computed(() => (isSet(config.contactApi) ? 'api' : 'mailto'))
 
 const form = reactive({
   name: '',
@@ -86,33 +77,6 @@ async function submit() {
         })
       })
       if (!res.ok) throw new Error(`Contact API responded ${res.status}`)
-    } else if (mode.value === 'formspree') {
-      const res = await fetch(config.formspreeEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          inquiry_type: form.type,
-          message: form.message,
-          _replyto: form.email
-        })
-      })
-      if (!res.ok) throw new Error(`Formspree responded ${res.status}`)
-    } else if (mode.value === 'emailjs') {
-      const result = await emailjs.send(
-        config.serviceId,
-        config.templateId,
-        {
-          from_name: form.name,
-          reply_to: form.email,
-          inquiry_type: form.type,
-          message: form.message,
-          to_email: CONTACT_EMAIL
-        },
-        { publicKey: config.publicKey }
-      )
-      if (!result?.text || result.status === 'error') throw new Error('EmailJS send failed')
     } else {
       // Fallback: open the visitor's mail client with a pre-filled draft.
       if (typeof window !== 'undefined') window.location.href = mailtoHref()

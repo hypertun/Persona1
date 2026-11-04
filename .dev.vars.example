@@ -2,23 +2,11 @@
 # SERVER-side counterpart to .env — these values run in the Cloudflare
 # function runtime and never reach the browser bundle.
 #
-# Transport A — Gmail SMTP (preferred: zero new vendors, the epone-web pattern).
-# App password: https://myaccount.google.com/apppasswords
-# (2FA must be enabled; it's the same kind of credential you use in
-#  epone-web/functions/.env). Gmail consumer limit: ~500 recipients/day.
-GMAIL_USER="sender@gmail.com"
-GMAIL_APP_PASSWORD="abcd efgh ijkl mnop"
-
-# Transport B — Resend fallback (optional; only used if GMAIL_* are unset).
-# Get a key: https://resend.com → API Keys (free tier: 100 emails/day).
-# RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxx"
-
-# Recipient inbox (defaults to the one baked into src/data/site.js).
-CONTACT_EMAIL="hvaneyeochonghan@gmail.com"
-
-# ── Optional: instant Telegram push notification when a new inquiry arrives ─
-# Best-effort, in addition to the email. Free, 2-min setup:
-#   1. Message @BotFather → /newbot → copy the bot token
+# Telegram is the ONLY delivery path for contact-form inquiries:
+# every submission arrives on your phone as a Telegram message.
+#
+# Setup (free, 2 minutes):
+#   1. Message @BotFather (https://t.me/BotFather) → /newbot → copy the bot token
 #   2. Send your new bot any message (e.g. "hi")
 #   3. Open https://api.telegram.org/bot<TOKEN>/getUpdates → copy chat.id
 NOTIFY_TELEGRAM_TOKEN=""

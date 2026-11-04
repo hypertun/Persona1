@@ -1,37 +1,30 @@
 // Cloudflare Pages Function — POST /api/contact
 //
-// Receives the contact-form submission and forwards it to your inbox.
-// Two transports, auto-selected by the environment variables you set
-// (Cloudflare dashboard → Settings → Variables & Secrets, or .dev.vars locally):
+// The single delivery path for contact-form submissions: a Telegram message
+// to Ivan's phone. Inquiries arrive ONLY as a Telegram ping; replies to leads
+// are composed from Gmail (one tap on the mailto: link in the message).
 //
-//   A) Gmail SMTP (preferred — zero new vendors, the epone-web pattern):
-//        GMAIL_USER         – Gmail address that sends the mail
-//        GMAIL_APP_PASSWORD – its app password (https://myaccount.google.com/apppasswords,
-//                             same credential you use in epone-web/functions/.env)
-//      → speaks SMTP directly to smtp.gmail.com:465 via cloudflare:sockets
-//        (hand-rolled protocol — see smtp-gmail.js; nodemailer can't run on Workers)
-//
-//   B) Resend fallback (optional, https://resend.com — 3000 emails/mo):
-//        RESEND_API_KEY     – server-side secret
-//      → simple HTTPS relay
-//
-//   Optional either way:
-//        CONTACT_EMAIL – recipient inbox (defaults to the address baked into the site)
-//
-//   Optional — instant push notification IN ADDITION to the email (best-effort:
-//   never blocks the visitor's response, failures are only logged):
-//        NOTIFY_TELEGRAM_TOKEN + NOTIFY_TELEGRAM_CHAT_ID  (Telegram bot)
-
-import { buildMessage, smtpDialog } from './smtp-gmail.js'
+// Environment variables (Cloudflare dashboard → Settings → Variables & Secrets,
+// or .dev.vars for local `npx wrangler pages dev`):
+//   NOTIFY_TELEGRAM_TOKEN   – bot token from @BotFather (https://t.me/BotFather)
+//   NOTIFY_TELEGRAM_CHAT_ID – your chat id (message the bot, then open
+//                             https://api.telegram.org/bot<TOKEN>/getUpdates)
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Strip control chars (header-injection safety) and cap length.
+// Strip control chars and cap length.
 function clean(value, maxLen = 500) {
   return String(value ?? '')
     .replace(/[\u0000-\u001f\u007f]/g, ' ')
     .trim()
     .slice(0, maxLen)
+}
+
+// Telegram sendMessage limit is 4096 chars; stay comfortably under per message.
+const MAX_CHARS_PER_MESSAGE = 3500
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 const json = (body, status = 200) =>
@@ -41,7 +34,7 @@ const json = (body, status = 200) =>
   })
 
 export async function onRequestPost(context) {
-  const { request, env, waitUntil } = context
+  const { request, env } = context
 
   let data
   try {
@@ -64,136 +57,52 @@ export async function onRequestPost(context) {
     return json({ ok: false, error: 'validation_failed' }, 400)
   }
 
-  const to = env.CONTACT_EMAIL || 'hvaneyeochonghan@gmail.com'
-
-  // ── Transport selection — one email must go out, or the request fails ──
-  const gmailUser = env.GMAIL_USER || ''
-  const gmailPass = env.GMAIL_APP_PASSWORD || ''
-
-  if (gmailUser && gmailPass) {
-    try {
-      await sendViaGmail({ user: gmailUser, pass: gmailPass, to, name, email, inquiryType, message })
-    } catch (e) {
-      console.error('Gmail SMTP relay failed:', e?.message)
-      return json({ ok: false, error: 'relay_failed' }, 502)
-    }
-  } else if (env.RESEND_API_KEY) {
-    try {
-      await sendViaResend(env, { to, name, email, inquiryType, message })
-    } catch (e) {
-      console.error('Contact relay failed:', e?.message)
-      return json({ ok: false, error: 'relay_failed' }, 502)
-    }
-  } else {
-    console.error('No email transport configured (GMAIL_USER/GMAIL_APP_PASSWORD or RESEND_API_KEY)')
+  const token = env.NOTIFY_TELEGRAM_TOKEN
+  const chatId = env.NOTIFY_TELEGRAM_CHAT_ID
+  if (!token || !chatId) {
+    console.error('No delivery path configured (NOTIFY_TELEGRAM_TOKEN / NOTIFY_TELEGRAM_CHAT_ID)')
     return json({ ok: false, error: 'relay_not_configured' }, 500)
   }
 
-  // ── Success — optional best-effort push notification (never breaks the form).
-  //    In production, waitUntil keeps the visitor's response snappy; the
-  //    promise is still awaited in tests/local dev where waitUntil is absent.
-  const notify = sendPushNotification(env, { name, email, inquiryType, message }).catch((e) => {
-    console.error('Push notification failed:', e?.message)
-  })
-  if (waitUntil) waitUntil(notify)
-  else await notify
+  // ── Delivery: Telegram messages (header → body chunks → reply link) ─────
+  const escaped = escapeHtml(message)
+  const chunks = []
+  for (let i = 0; i < escaped.length; i += MAX_CHARS_PER_MESSAGE) {
+    chunks.push(escaped.slice(i, i + MAX_CHARS_PER_MESSAGE))
+  }
+
+  const header =
+    `📩 <b>New inquiry — IvanBuilds</b>\n\n` +
+    `<b>From:</b> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;\n` +
+    `<b>Inquiry:</b> ${escapeHtml(inquiryType || 'General')}\n\n`
+  const footer = `\n\n<a href="mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent('Re: your inquiry — IvanBuilds')}">Reply to ${escapeHtml(name)}</a>`
+
+  try {
+    if (chunks.length === 1) {
+      await sendTelegram(token, chatId, header + chunks[0] + footer)
+    } else {
+      await sendTelegram(token, chatId, header + chunks[0])
+      for (let i = 1; i < chunks.length; i++) {
+        const isLast = i === chunks.length - 1
+        await sendTelegram(token, chatId, `${isLast ? '' : '(cont.) '}${chunks[i]}${isLast ? footer : ''}`)
+      }
+    }
+  } catch (e) {
+    console.error('Telegram delivery failed:', e?.message)
+    return json({ ok: false, error: 'relay_failed' }, 502)
+  }
 
   return json({ ok: true })
 }
 
-// ── Transport B: Resend (optional fallback) ────────────────────────────────
-async function sendViaResend(env, { to, name, email, inquiryType, message }) {
-  const from = env.CONTACT_FROM || 'IvanBuilds Site <onboarding@resend.dev>'
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from,
-      to,
-      reply_to: email,
-      subject: `[Consulting inquiry] ${inquiryType || 'General'} — from ${name}`,
-      text: `Name: ${name}\nEmail: ${email}\nInquiry: ${inquiryType}\n\n${message}`
-    })
-  })
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    throw new Error(`Resend responded ${res.status}: ${detail}`)
-  }
-}
-
-// ── Optional push notification: Telegram ────────────────────────────────
-// The instant "ping" so a hot lead never waits on inbox-checking. Best-effort
-// by design — an unreachable Telegram endpoint must never fail the visitor's submit.
-async function sendPushNotification(env, { name, email, inquiryType, message }) {
-  const token = env.NOTIFY_TELEGRAM_TOKEN
-  const chatId = env.NOTIFY_TELEGRAM_CHAT_ID
-  if (!token || !chatId) {
-    return // notification not configured — the email is the only notification
-  }
-
-  const excerpt = message.length > 300 ? message.slice(0, 300) + '…' : message
-  const text =
-    `📩 New inquiry — IvanBuilds\n` +
-    `[${inquiryType || 'General'}] from ${name} <${email}>\n` +
-    `${excerpt}\n\n` +
-    `Reply directly: mailto:${email}`
-
+async function sendTelegram(token, chatId, text) {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text })
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' })
   })
-  if (!res.ok) throw new Error(`Telegram responded ${res.status}`)
-}
-
-// ── Transport A: Gmail SMTP via cloudflare:sockets ───────────────────────
-// (The dynamic import keeps Node unit tests importable — cloudflare:sockets
-//  only exists in the Workers runtime.)
-async function sendViaGmail({ user, pass, to, name, email, inquiryType, message }) {
-  const { connect } = await import('cloudflare:sockets')
-  const socket = connect('smtp.gmail.com:465', { secureTransport: 'on' })
-
-  const encoder = new TextEncoder()
-  const decoder = new TextDecoder()
-  const writer = socket.writable.getWriter()
-  const reader = socket.readable.getReader()
-  let buffer = ''
-
-  const io = {
-    async readLine() {
-      let idx
-      while ((idx = buffer.indexOf('\n')) === -1) {
-        const { value, done } = await reader.read()
-        if (done) throw new Error('SMTP connection closed unexpectedly')
-        buffer += decoder.decode(value, { stream: true })
-      }
-      const line = buffer.slice(0, idx)
-      buffer = buffer.slice(idx + 1)
-      return line.replace(/\r$/, '')
-    },
-    async write(s) {
-      await writer.write(encoder.encode(s))
-    }
-  }
-
-  try {
-    await smtpDialog(io, {
-      user,
-      pass,
-      to,
-      message: buildMessage({
-        from: user, // Gmail rewrites this to the authenticated account anyway
-        to,
-        replyTo: email,
-        subject: `[Consulting inquiry] ${inquiryType || 'General'} — from ${name}`,
-        body: `Name: ${name}\nEmail: ${email}\nInquiry: ${inquiryType}\n\n${message}`
-      })
-    })
-  } finally {
-    try { await writer.close() } catch { /* socket may already be closed */ }
-    try { socket.close() } catch { /* idem */ }
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(`Telegram responded ${res.status}: ${detail}`)
   }
 }

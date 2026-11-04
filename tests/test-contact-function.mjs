@@ -1,21 +1,20 @@
 // Unit tests for functions/api/contact.js (Cloudflare Pages Function)
 // Runs on plain Node (18+) — Request/Response/fetch are Web-standard globals.
-// The Resend HTTP call is mocked to assert the exact relayed payload.
+// The Telegram API call is mocked to assert the exact delivered payload.
 import assert from 'node:assert/strict'
 
 const { onRequestPost } = await import('../functions/api/contact.js')
 
 const ENV = {
-  RESEND_API_KEY: 're_test_key_123',
-  CONTACT_EMAIL: 'hvaneyeochonghan@gmail.com',
-  CONTACT_FROM: 'IvanBuilds Site <noreply@ivanbuilds.dev>'
+  NOTIFY_TELEGRAM_TOKEN: 'tg-token',
+  NOTIFY_TELEGRAM_CHAT_ID: '12345'
 }
 
 let fetchCalls = []
 const realFetch = globalThis.fetch
 globalThis.fetch = async (url, init) => {
   fetchCalls.push({ url: String(url), init })
-  return new Response(JSON.stringify({ id: 'email-123' }), { status: 200 })
+  return new Response(JSON.stringify({ ok: true }), { status: 200 })
 }
 
 function post(body) {
@@ -42,8 +41,11 @@ const test = (name, fn) =>
     process.exitCode = 1
   })
 
-// 1. Valid submission → 200 + correct Resend payload
-await test('valid submission relays to Resend with correct payload', async () => {
+const lastCall = () => fetchCalls[fetchCalls.length - 1]
+const allPayloads = () => fetchCalls.map((c) => JSON.parse(c.init.body))
+
+// 1. Valid submission → 200 + one Telegram message with full inquiry
+await test('valid submission delivers one Telegram message with the full inquiry', async () => {
   fetchCalls = []
   const res = await post(valid)
   assert.equal(res.status, 200)
@@ -51,27 +53,44 @@ await test('valid submission relays to Resend with correct payload', async () =>
   assert.equal(fetchCalls.length, 1)
 
   const call = fetchCalls[0]
-  assert.equal(call.url, 'https://api.resend.com/emails')
-  assert.equal(call.init.headers.Authorization, 'Bearer re_test_key_123')
-
+  assert.equal(call.url, 'https://api.telegram.org/bottg-token/sendMessage')
   const payload = JSON.parse(call.init.body)
-  assert.equal(payload.to, 'hvaneyeochonghan@gmail.com')
-  assert.equal(payload.from, 'IvanBuilds Site <noreply@ivanbuilds.dev>')
-  assert.equal(payload.reply_to, 'jane@acme.com')
-  assert.match(payload.subject, /^\[Consulting inquiry\] Full-stack build — from Jane Tan$/)
-  assert.match(payload.text, /^Name: Jane Tan\nEmail: jane@acme\.com\nInquiry: Full-stack build\n\n/)
+  assert.equal(payload.chat_id, '12345')
+  assert.equal(payload.parse_mode, 'HTML')
+  assert.match(payload.text, /📩 <b>New inquiry — IvanBuilds<\/b>/)
+  assert.match(payload.text, /<b>From:<\/b> Jane Tan &lt;jane@acme\.com&gt;/)
+  assert.match(payload.text, /<b>Inquiry:<\/b> Full-stack build/)
+  assert.match(payload.text, /architecture review of our Golang order platform/)
+  assert.match(payload.text, /<a href="mailto:jane%40acme\.com\?subject=Re%3A%20your%20inquiry%20%E2%80%94%20IvanBuilds">Reply to Jane Tan<\/a>/)
 })
 
-// 2. Honeypot filled → fake success, no relay
+// 2. Honeypot filled → fake success, nothing delivered
 await test('honeypot (website field) silently accepts and drops', async () => {
   fetchCalls = []
   const res = await post({ ...valid, website: 'http://spam.example' })
   assert.equal(res.status, 200)
   assert.equal((await res.json()).ok, true)
-  assert.equal(fetchCalls.length, 0)
+  assert.equal(fetchCalls.length, 0, 'bot submission must not ping Telegram')
 })
 
-// 3–6. Validation rejections
+// 3. Long message → chunked delivery, reply link on the last chunk
+await test('5000-char message → chunked delivery with reply link on last chunk', async () => {
+  fetchCalls = []
+  // '§' appears nowhere in the header/footer boilerplate, so the count is exact
+  const long = { ...valid, message: 'x'.repeat(40) + ' Detailed requirement. ' + '§'.repeat(4900) }
+  const res = await post(long)
+  assert.equal(res.status, 200)
+  assert.ok(fetchCalls.length >= 2, `expected ≥2 messages, got ${fetchCalls.length}`)
+
+  const payloads = allPayloads()
+  assert.ok(!payloads[0].text.includes('Reply to'), 'first chunk has no reply link')
+  assert.match(payloads[payloads.length - 1].text, /Reply to Jane Tan/)
+  const totalMarks = payloads.reduce((n, p) => n + (p.text.match(/§/g) || []).length, 0)
+  assert.equal(totalMarks, 4900, 'no content lost across chunks')
+  for (const p of payloads) assert.ok(p.text.length <= 4096, 'every message within Telegram limit')
+})
+
+// 4–7. Validation rejections
 await test('invalid JSON body → 400 invalid_json', async () => {
   const res = await post('not-json{')
   assert.equal(res.status, 400)
@@ -79,35 +98,39 @@ await test('invalid JSON body → 400 invalid_json', async () => {
 })
 
 await test('missing name → 400 validation_failed', async () => {
+  fetchCalls = []
   const res = await post({ ...valid, name: '' })
   assert.equal(res.status, 400)
   assert.equal((await res.json()).error, 'validation_failed')
+  assert.equal(fetchCalls.length, 0)
 })
 
 await test('bad email → 400 validation_failed', async () => {
+  fetchCalls = []
   const res = await post({ ...valid, email: 'not-an-email' })
   assert.equal(res.status, 400)
-  assert.equal((await res.json()).error, 'validation_failed')
+  assert.equal(fetchCalls.length, 0)
 })
 
 await test('message under 20 chars → 400 validation_failed', async () => {
+  fetchCalls = []
   const res = await post({ ...valid, message: 'too short' })
   assert.equal(res.status, 400)
-  assert.equal((await res.json()).error, 'validation_failed')
+  assert.equal(fetchCalls.length, 0)
 })
 
-// 7. Header-injection attempt is sanitized
-await test('control chars (header injection) are stripped', async () => {
+// 8. HTML injection in visitor input is escaped (parse_mode HTML safety)
+await test('visitor-supplied HTML is escaped before parse_mode=HTML delivery', async () => {
   fetchCalls = []
-  const res = await post({ ...valid, name: 'Jane\r\nBcc: evil@attacker.com' })
-  assert.equal(res.status, 200)
-  const payload = JSON.parse(fetchCalls[0].init.body)
-  assert.ok(!/[\r\n]/.test(payload.subject), 'subject must be single-line (no header injection)')
-  assert.match(payload.subject, /Jane\s+Bcc: evil@attacker\.com/)
+  await post({ ...valid, name: '<b>Jane</b>', message: 'Rate: 5 < 10 && fine, details follow here.' })
+  const payload = JSON.parse(lastCall().init.body)
+  assert.ok(!payload.text.includes('<b>Jane</b>'), 'raw tags must not survive')
+  assert.match(payload.text, /&lt;b&gt;Jane&lt;\/b&gt;/)
+  assert.match(payload.text, /5 &lt; 10 &amp;&amp; fine/)
 })
 
-// 8. Missing API key → 500 relay_not_configured
-await test('no RESEND_API_KEY → 500 relay_not_configured', async () => {
+// 9. No Telegram config → 500 relay_not_configured
+await test('no NOTIFY_TELEGRAM_* secrets → 500 relay_not_configured', async () => {
   fetchCalls = []
   const request = new Request('https://x.pages.dev/api/contact', {
     method: 'POST',
@@ -120,135 +143,30 @@ await test('no RESEND_API_KEY → 500 relay_not_configured', async () => {
   assert.equal(fetchCalls.length, 0)
 })
 
-// 9. Resend failure → 502 relay_failed
-await test('Resend 500 → 502 relay_failed', async () => {
-  globalThis.fetch = async () => new Response('boom', { status: 500 })
+// 10. Telegram outage → 502 relay_failed (the ONLY path, so failure must surface)
+await test('Telegram 503 → 502 relay_failed', async () => {
+  globalThis.fetch = async () => new Response('overloaded', { status: 503 })
   const res = await post(valid)
   assert.equal(res.status, 502)
   assert.equal((await res.json()).error, 'relay_failed')
   globalThis.fetch = realFetch
 })
 
-// 10. Defaults without CONTACT_EMAIL/CONTACT_FROM env
-await test('falls back to baked-in recipient/from defaults', async () => {
+// 11. Second chunk failing → 502 (first chunk may have been delivered — acceptable)
+await test('mid-delivery chunk failure → 502, no ok:true lie', async () => {
   fetchCalls = []
+  let call = 0
   globalThis.fetch = async (url, init) => {
+    call++
     fetchCalls.push({ url: String(url), init })
-    return new Response(JSON.stringify({ id: 'e' }), { status: 200 })
+    return call === 1
+      ? new Response('{}', { status: 200 })
+      : new Response('err', { status: 500 })
   }
-  const request = new Request('https://x.pages.dev/api/contact', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(valid)
-  })
-  const res = await onRequestPost({ request, env: { RESEND_API_KEY: 're_k' } })
-  assert.equal(res.status, 200)
-  const payload = JSON.parse(fetchCalls[0].init.body)
-  assert.equal(payload.to, 'hvaneyeochonghan@gmail.com')
-  assert.match(payload.from, /onboarding@resend\.dev/)
-})
-
-// 11. Transport selection: Gmail creds → SMTP path, Resend never called
-//    (In Node, cloudflare:sockets doesn't exist, so the SMTP send fails — which
-//    is exactly what lets us prove the SMTP branch was selected: 502 with zero
-//    Resend calls. On Cloudflare the same path completes the real delivery.)
-await test('GMAIL_* creds present → SMTP transport selected (not Resend)', async () => {
-  fetchCalls = []
-  globalThis.fetch = async () => {
-    fetchCalls.push('resend-should-not-be-called')
-    return new Response('{}', { status: 200 })
-  }
-  const request = new Request('https://x.pages.dev/api/contact', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(valid)
-  })
-  const res = await onRequestPost({
-    request,
-    env: { GMAIL_USER: 'sender@gmail.com', GMAIL_APP_PASSWORD: 'abcd efgh ijkl mnop' }
-  })
-  assert.equal(res.status, 502, 'SMTP attempt fails in Node (no cloudflare:sockets)')
-  assert.equal((await res.json()).error, 'relay_failed')
-  assert.equal(fetchCalls.length, 0, 'must NOT call Resend when Gmail creds are set')
-})
-
-// ── Push notification layer (best-effort, in addition to the email) ────────
-
-// 12. Telegram notification fires on success, alongside the email
-await test('Telegram push notification fires after successful relay', async () => {
-  fetchCalls = []
-  globalThis.fetch = async (url, init) => {
-    fetchCalls.push({ url: String(url), init })
-    return new Response('{}', { status: 200 })
-  }
-  const request = new Request('https://x.pages.dev/api/contact', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(valid)
-  })
-  const background = []
-  const res = await onRequestPost({
-    request,
-    env: {
-      RESEND_API_KEY: 're_k',
-      NOTIFY_TELEGRAM_TOKEN: 'tg-token',
-      NOTIFY_TELEGRAM_CHAT_ID: '12345'
-    },
-    waitUntil: (p) => background.push(p)
-  })
-  assert.equal(res.status, 200, 'visitor response must not wait on the ping')
-  await Promise.all(background)
-
-  const tg = fetchCalls.find((c) => c.url.includes('api.telegram.org'))
-  assert.ok(tg, 'Telegram was called')
-  assert.equal(tg.url, 'https://api.telegram.org/bottg-token/sendMessage')
-  const payload = JSON.parse(tg.init.body)
-  assert.equal(payload.chat_id, '12345')
-  assert.match(payload.text, /Jane Tan/)
-  assert.match(payload.text, /jane@acme\.com/)
-  assert.match(payload.text, /mailto:jane@acme\.com/)
-  assert.ok(fetchCalls.some((c) => c.url === 'https://api.resend.com/emails'), 'email still sent')
-})
-
-// 13. Notification failure NEVER breaks the visitor's submit
-await test('dead webhook → still {ok:true} for the visitor', async () => {
-  fetchCalls = []
-  globalThis.fetch = async (url, init) => {
-    fetchCalls.push({ url: String(url), init })
-    if (String(url).includes('telegram')) return new Response('down', { status: 503 })
-    return new Response('{}', { status: 200 })
-  }
-  const request = new Request('https://x.pages.dev/api/contact', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(valid)
-  })
-  const res = await onRequestPost({
-    request,
-    env: { RESEND_API_KEY: 're_k', NOTIFY_TELEGRAM_TOKEN: 't', NOTIFY_TELEGRAM_CHAT_ID: '1' }
-  })
-  assert.equal(res.status, 200, 'best-effort: ping failure must not fail the submit')
-  assert.equal((await res.json()).ok, true)
-})
-
-// 14. No ping when the relay itself failed (no false alarms)
-await test('relay failure → no push notification', async () => {
-  fetchCalls = []
-  globalThis.fetch = async (url, init) => {
-    fetchCalls.push({ url: String(url), init })
-    return new Response('err', { status: 500 })
-  }
-  const request = new Request('https://x.pages.dev/api/contact', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(valid)
-  })
-  const res = await onRequestPost({
-    request,
-    env: { RESEND_API_KEY: 're_k', NOTIFY_TELEGRAM_TOKEN: 't', NOTIFY_TELEGRAM_CHAT_ID: '1' }
-  })
+  const long = { ...valid, message: 'z'.repeat(4200) }
+  const res = await post(long)
   assert.equal(res.status, 502)
-  assert.equal(fetchCalls.filter((c) => c.url.includes('telegram')).length, 0, 'no ping on failure')
+  globalThis.fetch = realFetch
 })
 
 globalThis.fetch = realFetch

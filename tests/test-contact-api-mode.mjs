@@ -5,10 +5,6 @@ import assert from 'node:assert/strict'
 // Set env BEFORE the Vite server compiles the component (import.meta.env injection)
 process.env.VITE_CONTACT_API = '/api/contact'
 process.env.VITE_CONTACT_EMAIL = 'hvaneyeochonghan@gmail.com'
-delete process.env.VITE_FORMSPREE_ENDPOINT
-delete process.env.VITE_EMAILJS_SERVICE_ID
-delete process.env.VITE_EMAILJS_TEMPLATE_ID
-delete process.env.VITE_EMAILJS_PUBLIC_KEY
 
 const { createServer } = await import('vite')
 

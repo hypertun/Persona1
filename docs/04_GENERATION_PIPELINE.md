@@ -241,4 +241,4 @@ ffmpeg -i avatar_talking.mp4 -i voiceover.mp3 \
 
 ## 7. Site contact loop (closes the funnel)
 
-Videos → "link in bio" → GitHub Pages site → `ContactForm.vue` → EmailJS/Formspree → Ivan's inbox. After any posting session, verify the funnel once end-to-end: submit a test inquiry from the live site and confirm receipt (see README §Contact form setup — step 5).
+Videos → "link in bio" → site → `ContactForm.vue` → `/api/contact` (Cloudflare Function) → Telegram ping on Ivan's phone. After any posting session, verify the funnel once end-to-end: submit a test inquiry from the live site and confirm the Telegram message arrives (see README §Contact form routing — Test the integration).
