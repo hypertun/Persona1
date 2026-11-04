@@ -107,7 +107,6 @@ With nothing configured, submitting opens the visitor's email app with a pre-fil
 
    **Optional — instant push notification** (in addition to the email, so a hot lead never waits on inbox-checking; best-effort — a dead webhook can never break the form):
    - `NOTIFY_TELEGRAM_TOKEN` + `NOTIFY_TELEGRAM_CHAT_ID` — free, 2-min setup: message [@BotFather](https://t.me/BotFather) → `/newbot` → copy the token; send your bot a "hi", then open `https://api.telegram.org/bot<TOKEN>/getUpdates` and copy the `chat.id`. Every inquiry then pings your phone with the lead's message + email.
-   - or `NOTIFY_SLACK_WEBHOOK` / `NOTIFY_DISCORD_WEBHOOK` — an Incoming Webhooks URL; same message posts to a channel.
 5. Deploy. Live at `https://ivanbuilds.pages.dev` (or your custom domain → Custom domains → add).
 
 **Test locally with functions:**

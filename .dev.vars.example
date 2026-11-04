@@ -16,18 +16,10 @@ GMAIL_APP_PASSWORD="abcd efgh ijkl mnop"
 # Recipient inbox (defaults to the one baked into src/data/site.js).
 CONTACT_EMAIL="hvaneyeochonghan@gmail.com"
 
-# ── Optional: instant push notification when a new inquiry arrives ─────
-# Best-effort, in addition to the email — pick ONE channel.
-#
-# Telegram (free, 2-min setup, phone notification):
+# ── Optional: instant Telegram push notification when a new inquiry arrives ─
+# Best-effort, in addition to the email. Free, 2-min setup:
 #   1. Message @BotFather → /newbot → copy the bot token
 #   2. Send your new bot any message (e.g. "hi")
 #   3. Open https://api.telegram.org/bot<TOKEN>/getUpdates → copy chat.id
 NOTIFY_TELEGRAM_TOKEN=""
 NOTIFY_TELEGRAM_CHAT_ID=""
-#
-# Slack — api.slack.com/apps → Incoming Webhooks → channel webhook URL:
-# NOTIFY_SLACK_WEBHOOK="https://hooks.slack.com/services/..."
-#
-# Discord — Server Settings → Integrations → Webhooks → channel webhook URL:
-# NOTIFY_DISCORD_WEBHOOK="https://discord.com/api/webhooks/..."

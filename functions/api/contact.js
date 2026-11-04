@@ -21,8 +21,6 @@
 //   Optional — instant push notification IN ADDITION to the email (best-effort:
 //   never blocks the visitor's response, failures are only logged):
 //        NOTIFY_TELEGRAM_TOKEN + NOTIFY_TELEGRAM_CHAT_ID  (Telegram bot)
-//        NOTIFY_SLACK_WEBHOOK                              (Slack Incoming Webhook)
-//        NOTIFY_DISCORD_WEBHOOK                           (Discord channel webhook)
 
 import { buildMessage, smtpDialog } from './smtp-gmail.js'
 
@@ -126,12 +124,14 @@ async function sendViaResend(env, { to, name, email, inquiryType, message }) {
   }
 }
 
-// ── Optional push notification (first configured channel wins) ────────────
+// ── Optional push notification: Telegram ────────────────────────────────
 // The instant "ping" so a hot lead never waits on inbox-checking. Best-effort
-// by design — an unreachable webhook must never fail the visitor's submit.
+// by design — an unreachable Telegram endpoint must never fail the visitor's submit.
 async function sendPushNotification(env, { name, email, inquiryType, message }) {
-  if (!env.NOTIFY_TELEGRAM_TOKEN && !env.NOTIFY_SLACK_WEBHOOK && !env.NOTIFY_DISCORD_WEBHOOK) {
-    return // no channel configured — the email is the only notification
+  const token = env.NOTIFY_TELEGRAM_TOKEN
+  const chatId = env.NOTIFY_TELEGRAM_CHAT_ID
+  if (!token || !chatId) {
+    return // notification not configured — the email is the only notification
   }
 
   const excerpt = message.length > 300 ? message.slice(0, 300) + '…' : message
@@ -141,35 +141,12 @@ async function sendPushNotification(env, { name, email, inquiryType, message }) 
     `${excerpt}\n\n` +
     `Reply directly: mailto:${email}`
 
-  if (env.NOTIFY_TELEGRAM_TOKEN && env.NOTIFY_TELEGRAM_CHAT_ID) {
-    const res = await fetch(
-      `https://api.telegram.org/bot${env.NOTIFY_TELEGRAM_TOKEN}/sendMessage`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: env.NOTIFY_TELEGRAM_CHAT_ID, text })
-      }
-    )
-    if (!res.ok) throw new Error(`Telegram responded ${res.status}`)
-    return
-  }
-
-  if (env.NOTIFY_SLACK_WEBHOOK) {
-    const res = await fetch(env.NOTIFY_SLACK_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    })
-    if (!res.ok) throw new Error(`Slack responded ${res.status}`)
-    return
-  }
-
-  const res = await fetch(env.NOTIFY_DISCORD_WEBHOOK, {
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: text })
+    body: JSON.stringify({ chat_id: chatId, text })
   })
-  if (!res.ok) throw new Error(`Discord responded ${res.status}`)
+  if (!res.ok) throw new Error(`Telegram responded ${res.status}`)
 }
 
 // ── Transport A: Gmail SMTP via cloudflare:sockets ───────────────────────

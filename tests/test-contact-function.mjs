@@ -210,31 +210,7 @@ await test('Telegram push notification fires after successful relay', async () =
   assert.ok(fetchCalls.some((c) => c.url === 'https://api.resend.com/emails'), 'email still sent')
 })
 
-// 13. Slack webhook variant
-await test('Slack webhook notification variant', async () => {
-  fetchCalls = []
-  globalThis.fetch = async (url, init) => {
-    fetchCalls.push({ url: String(url), init })
-    return new Response('{}', { status: 200 })
-  }
-  const request = new Request('https://x.pages.dev/api/contact', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(valid)
-  })
-  const background = []
-  await onRequestPost({
-    request,
-    env: { RESEND_API_KEY: 're_k', NOTIFY_SLACK_WEBHOOK: 'https://hooks.slack.com/services/T/B/X' },
-    waitUntil: (p) => background.push(p)
-  })
-  await Promise.all(background)
-  const slack = fetchCalls.find((c) => c.url.startsWith('https://hooks.slack.com'))
-  assert.ok(slack, 'Slack was called')
-  assert.equal(JSON.parse(slack.init.body).text.includes('Jane Tan'), true)
-})
-
-// 14. Notification failure NEVER breaks the visitor's submit
+// 13. Notification failure NEVER breaks the visitor's submit
 await test('dead webhook → still {ok:true} for the visitor', async () => {
   fetchCalls = []
   globalThis.fetch = async (url, init) => {
@@ -255,7 +231,7 @@ await test('dead webhook → still {ok:true} for the visitor', async () => {
   assert.equal((await res.json()).ok, true)
 })
 
-// 15. No ping when the relay itself failed (no false alarms)
+// 14. No ping when the relay itself failed (no false alarms)
 await test('relay failure → no push notification', async () => {
   fetchCalls = []
   globalThis.fetch = async (url, init) => {
