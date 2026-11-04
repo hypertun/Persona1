@@ -61,13 +61,13 @@
 
 ### B. Set up the AI generation pipeline (≈30 min, one-time)
 
-- [ ] **4. GCP + Gemini setup** — `cp scripts/.env.pipeline.example scripts/.env.pipeline` → fill `GCP_PROJECT_ID` + `GEMINI_API_KEY` → `gcloud auth application-default login` → enable `aiplatform.googleapis.com` + `texttospeech.googleapis.com`
-- [ ] **5. Generate the master persona portrait** — run `./scripts/generate_avatar_imagen3.sh output/imagen/avatar.png "<master prompt from docs/01 §2.1>"` → pick the best candidate → save as **`public/images/avatar.png`** (hero + OG image pick it up automatically) → commit & push
-- [ ] **6. (Optional, if you want lip-synced talking heads)** — create a HeyGen (or Synthesia) account → upload the master portrait as a photo avatar → store the API key in `scripts/.env.pipeline` (payloads ready in `docs/04` §5)
+- [ ] **4. Pipeline setup (free stack)** — `pip install edge-tts` + `pip install torch diffusers transformers accelerate` · optional `GEMINI_API_KEY` (AI Studio, free) in `scripts/.env.pipeline` · `brew install ffmpeg` — **no GCP billing, no HeyGen** (full architecture: docs/04)
+- [ ] **5. Generate the master persona portrait** — free via Gemini web app (gemini.google.com) with the master prompt from `docs/01 §2.1` (+ §2.2 negatives) → iterate conversationally → save as **`public/images/avatar.png`** (hero + OG image pick it up automatically) → commit & push · scripted alternative: `./scripts/generate_avatar_imagen3.sh` (needs GCP billing, optional)
+- [ ] **6. One base talking-head clip, then free lip-sync per video** — `python3 scripts/generate_base_video_wan.py --portrait public/images/avatar.png --output output/wan/base.mp4` (Wan 2.1-I2V: subtle motion, NEUTRAL mouth — vet this clip by eye, it's the persona forever) → per voiceover: `./scripts/lipsync_latentsync.sh base.mp4 voice.mp3 out.mp4` (LatentSync repaints the mouth per audio; CUDA — Kaggle T4 free or ~$0.50/hr rented 4090 → cents/video) — **quality gate: if video #1's mouth is uncanny, fall back to the B-roll format** (LTX-2 in ComfyUI, local & free)
 
 ### C. Start the content engine (ongoing)
 
-- [ ] **7. Batch Week 1 videos** — the 5 finished scripts are in `docs/03_VIDEO_SCRIPTS.md`; generate scripts for Days 5–7 with `./scripts/generate_script_gemini.sh` → fact-check each against the résumé → generate TTS voiceovers → assemble per `docs/04` §6
+- [ ] **7. Batch Week 1 videos** — the 5 finished scripts are in `docs/03_VIDEO_SCRIPTS.md`; generate scripts for Days 5–7 with `./scripts/generate_script_gemini.sh` → fact-check each against the résumé → generate voiceovers with `./scripts/generate_voiceover_edge_tts.sh` → lip-sync + assemble per `docs/04` §6–7
 - [ ] **8. Post Day 1 video** ("Cloud-native systems. Measurable results.") → enable each platform's AI-content label + keep the "AI presenter" watermark → set "link in bio" to the live site
 - [ ] **9. Run the weekly loop** — batch 7 scripts → TTS → renders → edit → schedule daily (rhythm & times in `docs/02` §1 & §5)
 - [ ] **10. Day 30 review** — check KPIs vs targets (`docs/02` §6); clone top-3 formats, retire bottom-3; adjust posting times using platform analytics

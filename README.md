@@ -7,7 +7,7 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 | Website | Vue 3 (Vite) + Tailwind CSS 4 |
 | Hosting | **Cloudflare Workers** (static assets + serverless API, recommended) *or* GitHub Pages |
 | Contact form | Own CF Worker (`/api/contact` → Telegram message to your phone) — the single path; site never sends email |
-| Content pipeline | Gemini 1.5 Pro (scripts) · Vertex AI TTS (voiceover) · Imagen 3 (persona visuals) · HeyGen/Synthesia (avatar animation) |
+| Content pipeline | Gemini (scripts, free) · edge-tts (voiceover) · Gemini web app / Imagen 3 (persona portrait) · Wan 2.1-I2V + LatentSync (open-source talking head) — $0 subscriptions |
 
 > ⚠️ **Content integrity rule:** every claim on the site and in every video must trace back to the résumé (*48451 – Senior Consultant Developer – Ivan Yeo.docx.pdf*). The data module `src/data/site.js` is the single source of truth — do not add unbacked claims.
 
@@ -99,15 +99,10 @@ Notes:
 
 ## Generate the AI persona portrait (one-time)
 
-1. `cp scripts/.env.pipeline.example scripts/.env.pipeline` and fill in `GCP_PROJECT_ID` (enable `aiplatform.googleapis.com`, `texttospeech.googleapis.com`; `gcloud auth application-default login`).
-2. Run:
-   ```bash
-   ./scripts/generate_avatar_imagen3.sh output/imagen/avatar.png \
-     "Photorealistic portrait of a Singaporean-Chinese male tech consultant in his early 30s, ..."
-   # full master prompt + negative prompt: docs/01_AI_PERSONA.md §2.1–2.2
-   ```
-3. Pick the best candidate → save as `public/images/avatar.png`. The hero, OG image and favicon pick it up automatically (the SVG placeholder is the on-error fallback).
-4. For all scene variations, always pass the master as the **reference image** (identity preservation) — see `docs/04_GENERATION_PIPELINE.md` §4.2.
+1. Open [gemini.google.com](https://gemini.google.com) (free) → paste the **master prompt** from `docs/01_AI_PERSONA.md` §2.1 (negative prompt §2.2) → iterate conversationally.
+2. Download the best candidate → save as `public/images/avatar.png`. The hero, OG image and favicon pick it up automatically (the SVG placeholder is the on-error fallback). Commit & push.
+3. For all scene variations, attach the master back into the chat as a **reference image** (identity preservation) — see `docs/04_GENERATION_PIPELINE.md` §4.
+4. Scripted alternative (optional, needs GCP billing): `./scripts/generate_avatar_imagen3.sh output/imagen/avatar.png "<master prompt>"`.
 
 ## Social media pipeline (30-day run)
 
