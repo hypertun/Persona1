@@ -17,6 +17,12 @@
 //
 //   Optional either way:
 //        CONTACT_EMAIL – recipient inbox (defaults to the address baked into the site)
+//
+//   Optional — instant push notification IN ADDITION to the email (best-effort:
+//   never blocks the visitor's response, failures are only logged):
+//        NOTIFY_TELEGRAM_TOKEN + NOTIFY_TELEGRAM_CHAT_ID  (Telegram bot)
+//        NOTIFY_SLACK_WEBHOOK                              (Slack Incoming Webhook)
+//        NOTIFY_DISCORD_WEBHOOK                           (Discord channel webhook)
 
 import { buildMessage, smtpDialog } from './smtp-gmail.js'
 
@@ -37,7 +43,7 @@ const json = (body, status = 200) =>
   })
 
 export async function onRequestPost(context) {
-  const { request, env } = context
+  const { request, env, waitUntil } = context
 
   let data
   try {
@@ -62,27 +68,44 @@ export async function onRequestPost(context) {
 
   const to = env.CONTACT_EMAIL || 'hvaneyeochonghan@gmail.com'
 
-  // ── Transport selection ──────────────────────────────────────────────
+  // ── Transport selection — one email must go out, or the request fails ──
   const gmailUser = env.GMAIL_USER || ''
   const gmailPass = env.GMAIL_APP_PASSWORD || ''
 
   if (gmailUser && gmailPass) {
     try {
       await sendViaGmail({ user: gmailUser, pass: gmailPass, to, name, email, inquiryType, message })
-      return json({ ok: true })
     } catch (e) {
       console.error('Gmail SMTP relay failed:', e?.message)
       return json({ ok: false, error: 'relay_failed' }, 502)
     }
-  }
-
-  if (!env.RESEND_API_KEY) {
+  } else if (env.RESEND_API_KEY) {
+    try {
+      await sendViaResend(env, { to, name, email, inquiryType, message })
+    } catch (e) {
+      console.error('Contact relay failed:', e?.message)
+      return json({ ok: false, error: 'relay_failed' }, 502)
+    }
+  } else {
     console.error('No email transport configured (GMAIL_USER/GMAIL_APP_PASSWORD or RESEND_API_KEY)')
     return json({ ok: false, error: 'relay_not_configured' }, 500)
   }
 
-  const from = env.CONTACT_FROM || 'IvanBuilds Site <onboarding@resend.dev>'
+  // ── Success — optional best-effort push notification (never breaks the form).
+  //    In production, waitUntil keeps the visitor's response snappy; the
+  //    promise is still awaited in tests/local dev where waitUntil is absent.
+  const notify = sendPushNotification(env, { name, email, inquiryType, message }).catch((e) => {
+    console.error('Push notification failed:', e?.message)
+  })
+  if (waitUntil) waitUntil(notify)
+  else await notify
 
+  return json({ ok: true })
+}
+
+// ── Transport B: Resend (optional fallback) ────────────────────────────────
+async function sendViaResend(env, { to, name, email, inquiryType, message }) {
+  const from = env.CONTACT_FROM || 'IvanBuilds Site <onboarding@resend.dev>'
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -97,14 +120,56 @@ export async function onRequestPost(context) {
       text: `Name: ${name}\nEmail: ${email}\nInquiry: ${inquiryType}\n\n${message}`
     })
   })
-
   if (!res.ok) {
     const detail = await res.text().catch(() => '')
-    console.error('Contact relay failed:', res.status, detail)
-    return json({ ok: false, error: 'relay_failed' }, 502)
+    throw new Error(`Resend responded ${res.status}: ${detail}`)
+  }
+}
+
+// ── Optional push notification (first configured channel wins) ────────────
+// The instant "ping" so a hot lead never waits on inbox-checking. Best-effort
+// by design — an unreachable webhook must never fail the visitor's submit.
+async function sendPushNotification(env, { name, email, inquiryType, message }) {
+  if (!env.NOTIFY_TELEGRAM_TOKEN && !env.NOTIFY_SLACK_WEBHOOK && !env.NOTIFY_DISCORD_WEBHOOK) {
+    return // no channel configured — the email is the only notification
   }
 
-  return json({ ok: true })
+  const excerpt = message.length > 300 ? message.slice(0, 300) + '…' : message
+  const text =
+    `📩 New inquiry — IvanBuilds\n` +
+    `[${inquiryType || 'General'}] from ${name} <${email}>\n` +
+    `${excerpt}\n\n` +
+    `Reply directly: mailto:${email}`
+
+  if (env.NOTIFY_TELEGRAM_TOKEN && env.NOTIFY_TELEGRAM_CHAT_ID) {
+    const res = await fetch(
+      `https://api.telegram.org/bot${env.NOTIFY_TELEGRAM_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: env.NOTIFY_TELEGRAM_CHAT_ID, text })
+      }
+    )
+    if (!res.ok) throw new Error(`Telegram responded ${res.status}`)
+    return
+  }
+
+  if (env.NOTIFY_SLACK_WEBHOOK) {
+    const res = await fetch(env.NOTIFY_SLACK_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    })
+    if (!res.ok) throw new Error(`Slack responded ${res.status}`)
+    return
+  }
+
+  const res = await fetch(env.NOTIFY_DISCORD_WEBHOOK, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: text })
+  })
+  if (!res.ok) throw new Error(`Discord responded ${res.status}`)
 }
 
 // ── Transport A: Gmail SMTP via cloudflare:sockets ───────────────────────

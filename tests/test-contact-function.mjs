@@ -172,6 +172,109 @@ await test('GMAIL_* creds present → SMTP transport selected (not Resend)', asy
   assert.equal(fetchCalls.length, 0, 'must NOT call Resend when Gmail creds are set')
 })
 
+// ── Push notification layer (best-effort, in addition to the email) ────────
+
+// 12. Telegram notification fires on success, alongside the email
+await test('Telegram push notification fires after successful relay', async () => {
+  fetchCalls = []
+  globalThis.fetch = async (url, init) => {
+    fetchCalls.push({ url: String(url), init })
+    return new Response('{}', { status: 200 })
+  }
+  const request = new Request('https://x.pages.dev/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(valid)
+  })
+  const background = []
+  const res = await onRequestPost({
+    request,
+    env: {
+      RESEND_API_KEY: 're_k',
+      NOTIFY_TELEGRAM_TOKEN: 'tg-token',
+      NOTIFY_TELEGRAM_CHAT_ID: '12345'
+    },
+    waitUntil: (p) => background.push(p)
+  })
+  assert.equal(res.status, 200, 'visitor response must not wait on the ping')
+  await Promise.all(background)
+
+  const tg = fetchCalls.find((c) => c.url.includes('api.telegram.org'))
+  assert.ok(tg, 'Telegram was called')
+  assert.equal(tg.url, 'https://api.telegram.org/bottg-token/sendMessage')
+  const payload = JSON.parse(tg.init.body)
+  assert.equal(payload.chat_id, '12345')
+  assert.match(payload.text, /Jane Tan/)
+  assert.match(payload.text, /jane@acme\.com/)
+  assert.match(payload.text, /mailto:jane@acme\.com/)
+  assert.ok(fetchCalls.some((c) => c.url === 'https://api.resend.com/emails'), 'email still sent')
+})
+
+// 13. Slack webhook variant
+await test('Slack webhook notification variant', async () => {
+  fetchCalls = []
+  globalThis.fetch = async (url, init) => {
+    fetchCalls.push({ url: String(url), init })
+    return new Response('{}', { status: 200 })
+  }
+  const request = new Request('https://x.pages.dev/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(valid)
+  })
+  const background = []
+  await onRequestPost({
+    request,
+    env: { RESEND_API_KEY: 're_k', NOTIFY_SLACK_WEBHOOK: 'https://hooks.slack.com/services/T/B/X' },
+    waitUntil: (p) => background.push(p)
+  })
+  await Promise.all(background)
+  const slack = fetchCalls.find((c) => c.url.startsWith('https://hooks.slack.com'))
+  assert.ok(slack, 'Slack was called')
+  assert.equal(JSON.parse(slack.init.body).text.includes('Jane Tan'), true)
+})
+
+// 14. Notification failure NEVER breaks the visitor's submit
+await test('dead webhook → still {ok:true} for the visitor', async () => {
+  fetchCalls = []
+  globalThis.fetch = async (url, init) => {
+    fetchCalls.push({ url: String(url), init })
+    if (String(url).includes('telegram')) return new Response('down', { status: 503 })
+    return new Response('{}', { status: 200 })
+  }
+  const request = new Request('https://x.pages.dev/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(valid)
+  })
+  const res = await onRequestPost({
+    request,
+    env: { RESEND_API_KEY: 're_k', NOTIFY_TELEGRAM_TOKEN: 't', NOTIFY_TELEGRAM_CHAT_ID: '1' }
+  })
+  assert.equal(res.status, 200, 'best-effort: ping failure must not fail the submit')
+  assert.equal((await res.json()).ok, true)
+})
+
+// 15. No ping when the relay itself failed (no false alarms)
+await test('relay failure → no push notification', async () => {
+  fetchCalls = []
+  globalThis.fetch = async (url, init) => {
+    fetchCalls.push({ url: String(url), init })
+    return new Response('err', { status: 500 })
+  }
+  const request = new Request('https://x.pages.dev/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(valid)
+  })
+  const res = await onRequestPost({
+    request,
+    env: { RESEND_API_KEY: 're_k', NOTIFY_TELEGRAM_TOKEN: 't', NOTIFY_TELEGRAM_CHAT_ID: '1' }
+  })
+  assert.equal(res.status, 502)
+  assert.equal(fetchCalls.filter((c) => c.url.includes('telegram')).length, 0, 'no ping on failure')
+})
+
 globalThis.fetch = realFetch
 
 console.log(results.join('\n'))
