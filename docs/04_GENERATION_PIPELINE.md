@@ -2,7 +2,7 @@
 
 > Phase 3 deliverable — the full technical workflow, rebuilt to run at **$0 in subscriptions**:
 > Gemini (scripts, free AI Studio key) → edge-tts (voiceover) → Gemini web app (master portrait)
-> → **Wan 2.1-I2V** (one base talking-head clip) → **LatentSync** (lip-sync per voiceover)
+> → **Wan 2.2-TI2V-5B** (one base talking-head clip) → **LatentSync** (lip-sync per voiceover)
 > → assembly → posting. The only paid step, if you don't own a CUDA GPU, is renting one at
 > cents-per-video. Runnable helpers live in `scripts/`.
 
@@ -15,7 +15,7 @@ flowchart LR
     A[30-day calendar<br/>docs/02] --> B[Gemini API free tier<br/>script generation<br/>scripts/generate_script_gemini.sh]
     B -->|script.txt| C[Human fact-check<br/>vs resume]
     C -->|approved| D[edge-tts<br/>voiceover .mp3<br/>scripts/generate_voiceover_edge_tts.sh]
-    E[Gemini web app<br/>master portrait<br/>FREE, manual<br/>docs/01 §2.1 prompt] --> F[Wan 2.1-I2V<br/>ONE base clip<br/>scripts/generate_base_video_wan.py]
+    E[Gemini web app<br/>master portrait<br/>FREE, manual<br/>docs/01 §2.1 prompt] --> F[Wan 2.2-TI2V-5B<br/>ONE base clip<br/>scripts/generate_base_video_wan.py]
     F -->|one vetted base| G[LatentSync<br/>lip-sync per voiceover<br/>scripts/lipsync_latentsync.sh]
     D --> G
     G --> H[Assembly<br/>FFmpeg / CapCut<br/>captions + watermark]
@@ -31,7 +31,7 @@ flowchart LR
 | Video scripts | Gemini API (AI Studio free tier) or web app | $0 |
 | Voiceover | edge-tts (Microsoft neural voices, pip) | $0 |
 | Master portrait | Gemini web app (conversational, iterate free) | $0 |
-| Base clip | Wan 2.1-I2V 1.3B (diffusers) | $0 local (M-series: slow) or Kaggle T4 free |
+| Base clip | Wan 2.2-TI2V-5B-Diffusers (diffusers) | $0 local (M-series: slow) or Kaggle T4 free |
 | Lip-sync | LatentSync (open source, ByteDance) | CUDA required: Kaggle T4 free, or rented 4090 ≈ **$0.02–0.05/video** |
 | B-roll (optional) | LTX-2 in ComfyUI (local) | $0 |
 | Assembly | FFmpeg / CapCut | $0 |
@@ -86,7 +86,7 @@ Persona voice: **`en-US-AndrewNeural`** (confident, warm) at rate `+10%`. Altern
 
 > Optional scripted alternative (needs GCP billing): `scripts/generate_avatar_imagen3.sh` — same prompts, Vertex AI `imagen-3.0-generate-002`, fixed seed. Only worth it for batch generation; the manual path above is free.
 
-## 5. Base talking-head clip (once) — Wan 2.1-I2V
+## 5. Base talking-head clip (once) — Wan 2.2-TI2V-5B
 
 The **one generated video that defines the persona forever**. Generate from the master portrait (I2V, not T2V — T2V invents a new face):
 
