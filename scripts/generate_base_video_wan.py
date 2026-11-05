@@ -23,15 +23,21 @@ Hardware reality (docs/04 §5):
     short base is fine; generate the LONGEST clean clip your hardware allows.
 
 Install once (venv):
-    pip install torch diffusers transformers accelerate safetensors
+    pip install torch diffusers transformers accelerate safetensors ftfy opencv-python
 """
 import argparse
 
 import torch
+
+# Preflight: fail FAST with a clear message, not after a 5-minute render.
+try:
+    import cv2  # noqa: F401 — export_to_video backend
+except ImportError:
+    raise SystemExit("opencv-python missing (video export backend): pip install opencv-python")
 from diffusers import AutoencoderKLWan, WanImageToVideoPipeline
 from diffusers.utils import export_to_video, load_image
 
-MODEL_ID = "Wan-AI/Wan2.1-I2V-1.3B"
+MODEL_ID = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"  # diffusers-format conversion of Wan2.2-TI2V-5B
 
 # The base must NOT talk — LatentSync replaces the mouth region from a clean slate.
 DEFAULT_PROMPT = (
@@ -52,9 +58,10 @@ def main() -> None:
     p.add_argument("--output", required=True, help="output video path (mp4)")
     p.add_argument("--prompt", default=DEFAULT_PROMPT)
     p.add_argument("--num-frames", type=int, default=None,
-                   help="default: 81 on CUDA (5s @ 16fps), 33 on MPS")
+                   help="default: 81 on CUDA (~3.4s @ 24fps), 33 on MPS")
     p.add_argument("--width", type=int, default=480)
     p.add_argument("--height", type=int, default=832)  # 9:16 vertical
+    p.add_argument("--fps", type=int, default=24)  # Wan 2.2 native frame rate
     p.add_argument("--seed", type=int, default=20260101)
     args = p.parse_args()
 
@@ -66,7 +73,7 @@ def main() -> None:
         raise SystemExit("No CUDA/MPS device found. Rent a GPU (docs/04 §5) or run on Kaggle.")
 
     num_frames = args.num_frames or (81 if device == "cuda" else 33)
-    print(f"[wan-i2v] device={device} dtype={dtype} frames={num_frames} ({num_frames/16:.1f}s @ 16fps)")
+    print(f"[wan-i2v] device={device} dtype={dtype} frames={num_frames} ({num_frames/args.fps:.1f}s @ {args.fps}fps)")
 
     # VAE must stay float32 to avoid NaNs (diffusers requirement for Wan).
     vae = AutoencoderKLWan.from_pretrained(MODEL_ID, subfolder="vae", torch_dtype=torch.float32)
@@ -89,7 +96,7 @@ def main() -> None:
         generator=generator,
     ).frames[0]
 
-    export_to_video(result, args.output, fps=16)
+    export_to_video(result, args.output, fps=args.fps)
     print(f"✅ base video → {args.output}")
     print("   NEXT: eyeball it. Face consistent with the portrait? Mouth neutral? Motion subtle?")
     print("   Then: ./scripts/lipsync_latentsync.sh to sync it with a voiceover.")

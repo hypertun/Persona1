@@ -45,7 +45,7 @@ Identity-preservation principle: **the master portrait is generated once, the ba
 pip install edge-tts
 
 # Base video generation (free; GPU strongly preferred)
-pip install torch diffusers transformers accelerate safetensors
+pip install torch diffusers transformers accelerate safetensors ftfy opencv-python
 
 # Optional: scripted script-generation via Gemini API
 cp scripts/.env.pipeline.example scripts/.env.pipeline   # fill GEMINI_API_KEY (aistudio.google.com → Get API key — free)
