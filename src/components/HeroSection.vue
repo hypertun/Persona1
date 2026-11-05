@@ -7,7 +7,7 @@ import { profile } from '../data/site.js'
 // Drop the generated portrait at public/images/avatar.png to replace the
 // placeholder — see docs/04_GENERATION_PIPELINE.md for the generation script.
 const base = import.meta.env.BASE_URL
-const avatarSrc = ref(base + 'images/avatar.png')
+const avatarSrc = ref(base + 'images/avatar.jpg')
 const placeholderSrc = base + 'images/avatar-placeholder.svg'
 
 function onAvatarError() {
