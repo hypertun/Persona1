@@ -4,7 +4,7 @@ import Icon from './Icon.vue'
 import { profile } from '../data/site.js'
 
 // The hero image is an AI-generated persona render (Google Imagen 3).
-// Drop the generated portrait at public/images/avatar.png to replace the
+// Drop the generated portrait at public/images/avatar.jpg to replace the
 // placeholder — see docs/04_GENERATION_PIPELINE.md for the generation script.
 const base = import.meta.env.BASE_URL
 const avatarSrc = ref(base + 'images/avatar.jpg')

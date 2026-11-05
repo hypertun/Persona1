@@ -81,7 +81,7 @@ Persona voice: **`en-US-AndrewNeural`** (confident, warm) at rate `+10%`. Altern
 
 1. Open [gemini.google.com](https://gemini.google.com) and paste the **master prompt** from `docs/01_AI_PERSONA.md §2.1` (with the §2.2 negative prompt as "avoid:").
 2. Iterate conversationally ("more candid", "shirt collar visible", "cooler rim light") until satisfied — free, no quota anxiety.
-3. Download → save as **`public/images/avatar.png`** → commit & push (hero + OG image pick it up; SVG placeholder is the fallback).
+3. Download → save as **`public/images/avatar.jpg`** → commit & push (hero + OG image pick it up; SVG placeholder is the fallback).
 4. **Scene variations:** attach the master portrait back into the chat as a reference and describe the new scene ("same person, at a whiteboard drawing a Golang microservices diagram"). Gemini keeps the face — this replaces the old Imagen 3 reference-image flow.
 
 > Optional scripted alternative (needs GCP billing): `scripts/generate_avatar_imagen3.sh` — same prompts, Vertex AI `imagen-3.0-generate-002`, fixed seed. Only worth it for batch generation; the manual path above is free.
@@ -92,7 +92,7 @@ The **one generated video that defines the persona forever**. Generate from the 
 
 ```bash
 python3 scripts/generate_base_video_wan.py \
-  --portrait public/images/avatar.png \
+  --portrait public/images/avatar.jpg \
   --output output/wan/base.mp4
 ```
 
