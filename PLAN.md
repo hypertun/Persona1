@@ -62,7 +62,7 @@
 ### B. Set up the AI generation pipeline (≈30 min, one-time)
 
 - [ ] **4. Pipeline setup (free stack)** — `pip install edge-tts` + `pip install torch diffusers transformers accelerate` · optional `GEMINI_API_KEY` (AI Studio, free) in `scripts/.env.pipeline` · `brew install ffmpeg` — **no GCP billing, no HeyGen** (full architecture: docs/04)
-- [ ] **5. Generate the master persona portrait** — free via Gemini web app (gemini.google.com) with the master prompt from `docs/01 §2.1` (+ §2.2 negatives) → iterate conversationally → save as **`public/images/avatar.jpg`** (hero + OG image pick it up automatically) → commit & push · scripted alternative: `./scripts/generate_avatar_imagen3.sh` (needs GCP billing, optional)
+- [x] **5. Master persona portrait** — ✅ done: Gemini web app master (§2.1 prompt) → raw kept at output/imagen/master-raw.jpg (gitignored) → served as public/images/avatar.jpg (1600px, 265 KB) — hero + OG live on the deployed site
 - [ ] **6. One base talking-head clip, then free lip-sync per video** — `python3 scripts/generate_base_video_wan.py --portrait public/images/avatar.jpg --output output/wan/base.mp4` (Wan 2.1-I2V: subtle motion, NEUTRAL mouth — vet this clip by eye, it's the persona forever) → per voiceover: `./scripts/lipsync_latentsync.sh base.mp4 voice.mp3 out.mp4` (LatentSync repaints the mouth per audio; CUDA — Kaggle T4 free or ~$0.50/hr rented 4090 → cents/video) — **quality gate: if video #1's mouth is uncanny, fall back to the B-roll format** (LTX-2 in ComfyUI, local & free)
 
 ### C. Start the content engine (ongoing)

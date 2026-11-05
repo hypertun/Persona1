@@ -53,7 +53,7 @@ asymmetric eyes, plastic skin, oversaturated, watermark, text, distorted hands
 Imagen 3 does not perfectly reproduce a face from a text prompt alone. Use this 3-step loop:
 
 1. **Generate a master portrait once** (using the script in `scripts/generate_avatar_imagen3.sh`, fixed `seed=20260101`). Review candidates; pick the one that best matches the master prompt.
-2. **Save the winner as `public/images/avatar.png`** (site) **and** as `assets/ivan-master.png` in your generation folder.
+2. **Save the winner as `public/images/avatar.jpg`** (site) **and** as `output/imagen/master-raw.jpg` in your generation folder.
 3. **For every subsequent scene/pose**, use Imagen 3 *image editing* (`imagen-3.0-capability-001` on Vertex AI) with the master portrait as the reference input image, plus a scene delta prompt, e.g.:
    ```
    Same person, now standing at a whiteboard drawing a Golang microservices
@@ -66,7 +66,7 @@ Imagen 3 does not perfectly reproduce a face from a text prompt alone. Use this 
 
 | Asset | Aspect ratio / size | Imagen 3 config |
 |-------|--------------------|-----------------|
-| Website hero (public/images/avatar.png) | 4:5, ≥1024×1280 | `imagen-3.0-generate-002`, sampleCount 4-8 |
+| Website hero (public/images/avatar.jpg) | 4:5, ≥1024×1280 | `imagen-3.0-generate-002`, sampleCount 4-8 |
 | TikTok/Reels/Shorts talking-head frame | 9:16, 1080×1920 | edit endpoint, master portrait as reference |
 | Profile pictures | 1:1, 1024×1024 | edit endpoint, face-forward crop |
 | YouTube thumbnails | 16:9, 1280×720 | edit endpoint + platform-safe padding |
