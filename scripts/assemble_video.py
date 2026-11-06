@@ -35,10 +35,11 @@ END_FACE = "output/living_portraits/03_cta_smile.webm"  # final beat: face linge
 PORTRAIT_LEN = 3.375  # seconds per living-portrait clip
 
 BEATS = [
-    # face carries only the first ~2.5s — the voice-over-a-still-face mismatch
-    # is glaring if the portrait holds longer; text carries the rest of the hook
-    (None,          "portrait", "output/living_portraits/01_hook_sway.webm"),   # "Five years. Three industries."
-    ("obsession",   "card",     "output/assembly_cards/hook_text.png"),        # "One obsession — systems that don't fall over."
+    # PURE TYPE OPEN — the face appears only at the end (the smile close);
+    # voice is never over a face anywhere in the video
+    (None,          "card",     "output/assembly_cards/hook_1.png"),           # "Five years."
+    ("industries",  "card",     "output/assembly_cards/hook_2.png"),          # "Three industries."
+    ("obsession",   "card",     "output/assembly_cards/hook_text.png"),       # "One obsession — systems that don't fall over."
     ("ivan",        "card",     "output/assembly_cards/hero_intro.png"),
     ("measure",     "card",     "output/assembly_cards/money.png"),
     ("receipts",    "card",     "output/assembly_cards/metric_80.png"),
