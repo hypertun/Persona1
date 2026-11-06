@@ -30,6 +30,10 @@ BADGE = "output/assembly_cards/badge_ai_presenter.png"
 # beat map: (anchor_word, visual_kind, asset_path) — each visual starts when
 # the voice says the anchor word. "portrait" clips freeze their last frame if
 # the beat is longer than the clip.
+OUTRO_CARD = "output/assembly_cards/outro.png"   # carries the "Follow…" line
+END_FACE = "output/living_portraits/03_cta_smile.webm"  # final beat: face lingers, smile forms
+PORTRAIT_LEN = 3.375  # seconds per living-portrait clip
+
 BEATS = [
     # face carries only the first ~2.5s — the voice-over-a-still-face mismatch
     # is glaring if the portrait holds longer; text carries the rest of the hook
@@ -49,9 +53,6 @@ BEATS = [
     ("hypotheticals","card",    "output/assembly_cards/repos.png"),
     ("Follow",      "card",     OUTRO_CARD),          # voice finishes over the outro card
 ]
-OUTRO_CARD = "output/assembly_cards/outro.png"   # carries the "Follow…" line
-END_FACE = "output/living_portraits/03_cta_smile.webm"  # final beat: face lingers, smile forms
-PORTRAIT_LEN = 3.375  # seconds per living-portrait clip
 
 
 def run(cmd):
