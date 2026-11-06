@@ -30,14 +30,9 @@
 
 - [x] 30-day content calendar for TikTok / Reels / Shorts — 4 pillars (Architecture Tips, AI-Augmented Workflows, Engineering Velocity, Case Studies), day-by-day hooks, hashtag pools, batch plan, KPIs → `docs/02_CONTENT_STRATEGY.md`
 - [x] First 5 fully-produced scripts (30–60 s, hook-driven, résumé-verified, with VO/onscreen/visual beats + fact-check columns) → `docs/03_VIDEO_SCRIPTS.md`
-- [x] Gemini 1.5 Pro script-generation prompt (persona voice + résumé fact base + 5-beat structure) → `docs/04_GENERATION_PIPELINE.md` §2
-- [x] Runnable pipeline scripts:
-  - [x] `scripts/generate_script_gemini.sh` — Gemini scriptwriting
-  - [x] `scripts/generate_voiceover_tts.sh` — Vertex AI TTS voiceover (persona voice `en-US-Neural2-J`)
-  - [x] `scripts/generate_avatar_imagen3.sh` — Imagen 3 portrait + identity-preserving scene edits
-- [x] Avatar lip-sync API payloads (HeyGen v2 + Synthesia) → `docs/04_GENERATION_PIPELINE.md` §5
-- [x] Assembly & QA checklist (captions, AI-presenter watermark, 9:16 export, funnel test) → `docs/04_GENERATION_PIPELINE.md` §6–7
-- [ ] ⬜ **Generate the actual media** — master Imagen 3 portrait, TTS voiceovers, HeyGen renders (needs your GCP credentials — see "Next actions" #5–#7)
+- [x] Gemini script-generation prompt (persona voice + résumé fact base + 5-beat structure) → embedded in `scripts/generate_script_gemini.sh`
+- [x] Runnable scripts kept: `generate_script_gemini.sh` (scriptwriting), `generate_avatar_imagen3.sh` (portrait/scene edits) — voiceover + video scripts removed in the stack reset
+- [ ] ⬜ **Generate the actual media** — master portrait ✅ done; voiceover + talking-head renders pending the new techstack
 
 ## Phase 4 — Review & Handoff · ✅ COMPLETE
 
@@ -61,27 +56,6 @@
 
 ### B. Set up the AI generation pipeline (≈30 min, one-time)
 
-- [ ] **4. Pipeline setup (free stack)** — `pip install edge-tts` + `pip install torch diffusers transformers accelerate` · optional `GEMINI_API_KEY` (AI Studio, free) in `scripts/.env.pipeline` · `brew install ffmpeg` — **no GCP billing, no HeyGen** (full architecture: docs/04)
+- [ ] **4. Media pipeline — techstack TBD** — the open-source video stack (edge-tts + Wan 2.2 + LatentSync-MLX) was built end-to-end, then **removed after the quality review** (mouth/eyes too robotic); ~53 GB of models + all pipeline scripts deleted. Ivan is re-selecting the stack; strategy docs (02–03) unchanged.
 - [x] **5. Master persona portrait** — ✅ done: Gemini web app master (§2.1 prompt) → raw kept at output/imagen/master-raw.jpg (gitignored) → served as public/images/avatar.jpg (1600px, 265 KB) — hero + OG live on the deployed site
-- [ ] **6. One base talking-head clip, then free lip-sync per video** — ✅ base clip generated (33f @24fps, 480×832, ~5 min on M5 Pro) — vet by eye → per voiceover: `./scripts/lipsync_latentsync.sh base.mp4 voice.mp3 out.mp4` (Wan 2.2-TI2V-5B: subtle motion, NEUTRAL mouth — vet this clip by eye, it's the persona forever) → per voiceover: `./scripts/lipsync_latentsync.sh base.mp4 voice.mp3 out.mp4` (LatentSync repaints the mouth per audio; CUDA — Kaggle T4 free or ~$0.50/hr rented 4090 → cents/video) — **quality gate: if video #1's mouth is uncanny, fall back to the B-roll format** (LTX-2 in ComfyUI, local & free)
-
-### C. Start the content engine (ongoing)
-
-- [ ] **7. Batch Week 1 videos** — the 5 finished scripts are in `docs/03_VIDEO_SCRIPTS.md`; generate scripts for Days 5–7 with `./scripts/generate_script_gemini.sh` → fact-check each against the résumé → generate voiceovers with `./scripts/generate_voiceover_edge_tts.sh` → lip-sync + assemble per `docs/04` §6–7
-- [ ] **8. Post Day 1 video** ("Cloud-native systems. Measurable results.") → enable each platform's AI-content label + keep the "AI presenter" watermark → set "link in bio" to the live site
-- [ ] **9. Run the weekly loop** — batch 7 scripts → TTS → renders → edit → schedule daily (rhythm & times in `docs/02` §1 & §5)
-- [ ] **10. Day 30 review** — check KPIs vs targets (`docs/02` §6); clone top-3 formats, retire bottom-3; adjust posting times using platform analytics
-- [ ] **11. Every posting session** — one-click funnel test: confirm "link in bio" → site → contact form all still work end-to-end (on Cloudflare: also check the function logs)
-- [ ] **12. (Optional) Upgrade: Cloudflare Turnstile on the form + D1/KV lead storage** — free; the function is yours to extend
-
----
-
-### Status summary
-
-| Phase | Status |
-|---|---|
-| 1 — Persona development | ✅ 100% |
-| 2 — Web development | ✅ 100% (media: placeholder avatar) |
-| 3 — Content pipeline | ✅ docs/tools 100% · ⬜ media generation pending (actions #5–#6) |
-| 4 — Review & handoff | ✅ 100% (re-verify form after #1–#2) |
-| **Your remaining work** | **12 checklist items above (~45 min setup, then a weekly cadence)** |
+- [ ] **6. Talking-head pipeline** — pending new techstack (see item 4)

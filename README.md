@@ -7,7 +7,7 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 | Website | Vue 3 (Vite) + Tailwind CSS 4 |
 | Hosting | **Cloudflare Workers** (static assets + serverless API, recommended) *or* GitHub Pages |
 | Contact form | Own CF Worker (`/api/contact` → Telegram message to your phone) — the single path; site never sends email |
-| Content pipeline | Gemini (scripts, free) · edge-tts (voiceover) · Gemini web app / Imagen 3 (persona portrait) · Wan 2.1-I2V + LatentSync (open-source talking head) — $0 subscriptions |
+| Content pipeline | TBD — techstack being re-selected (persona portrait done: Gemini web app) |
 
 > ⚠️ **Content integrity rule:** every claim on the site and in every video must trace back to the résumé (*48451 – Senior Consultant Developer – Ivan Yeo.docx.pdf*). The data module `src/data/site.js` is the single source of truth — do not add unbacked claims.
 
@@ -23,12 +23,10 @@ Lead-generation portfolio site for **Ivan Yeo, Senior Consultant Developer (Sing
 ├── docs/
 │   ├── 01_AI_PERSONA.md           # Persona: name/handles, Imagen 3 blueprint, voice bible
 │   ├── 02_CONTENT_STRATEGY.md     # 30-day content calendar (TikTok/Reels/Shorts)
-│   ├── 03_VIDEO_SCRIPTS.md        # First 5 fully-produced scripts
-│   └── 04_GENERATION_PIPELINE.md  # Gemini → TTS → Imagen 3 → HeyGen workflow
+│   └── 03_VIDEO_SCRIPTS.md        # First 5 fully-produced scripts + Gemini prompt template
 ├── scripts/
-│   ├── .env.pipeline.example      # GCP / Gemini / HeyGen credentials template
-│   ├── generate_script_gemini.sh  # Script writing (Gemini 1.5 Pro)
-│   ├── generate_voiceover_tts.sh  # Voiceover (Vertex AI TTS)
+│   ├── .env.pipeline.example      # Gemini credentials template (script generation)
+│   ├── generate_script_gemini.sh  # Script writing (Gemini)
 │   └── generate_avatar_imagen3.sh # Persona stills (Imagen 3 + reference-image edits)
 ├── public/images/
 │   ├── avatar.jpg                 # ← drop your Imagen 3 master portrait here
@@ -101,7 +99,7 @@ Notes:
 
 1. Open [gemini.google.com](https://gemini.google.com) (free) → paste the **master prompt** from `docs/01_AI_PERSONA.md` §2.1 (negative prompt §2.2) → iterate conversationally.
 2. Download the best candidate → save as `public/images/avatar.jpg`. The hero, OG image and favicon pick it up automatically (the SVG placeholder is the on-error fallback). Commit & push.
-3. For all scene variations, attach the master back into the chat as a **reference image** (identity preservation) — see `docs/04_GENERATION_PIPELINE.md` §4.
+3. For all scene variations, attach the master back into the chat as a **reference image** (identity preservation) — see `docs/01_AI_PERSONA.md` §2.3.
 4. Scripted alternative (optional, needs GCP billing): `./scripts/generate_avatar_imagen3.sh output/imagen/avatar.jpg "<master prompt>"`.
 
 ## Social media pipeline (30-day run)
@@ -109,10 +107,11 @@ Notes:
 Read in order:
 1. `docs/01_AI_PERSONA.md` — persona, Imagen 3 blueprint, voice bible
 2. `docs/02_CONTENT_STRATEGY.md` — calendar, hashtags, KPIs
-3. `docs/03_VIDEO_SCRIPTS.md` — first 5 scripts, production-ready
-4. `docs/04_GENERATION_PIPELINE.md` — Gemini/TTS/Imagen/HeyGen API recipes + QA checklist
+3. `docs/03_VIDEO_SCRIPTS.md` — first 5 scripts, production-ready + the Gemini prompt template
 
-Weekly loop: batch 7 scripts (Gemini) → fact-check vs résumé → batch TTS → batch avatar renders → edit → schedule daily posts.
+> Generation techstack (voiceover / talking head): **TBD — being re-selected.** The previous open-source stack (edge-tts + Wan 2.2 + LatentSync) was removed after a quality review.
+
+Weekly loop: batch 7 scripts (Gemini) → fact-check vs résumé → voice/face production (stack TBD) → edit → schedule daily posts.
 
 ## Integrity checklist (Phase 4)
 

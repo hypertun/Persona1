@@ -105,8 +105,8 @@ Legend — Format: 🎤 talking-head (HeyGen avatar) · 🖥 screen-share + VO �
 
 ## 5. Batch production plan (repeat weekly)
 
-1. **Sunday PM — Script batch (Day n..n+6):** run the 7 weekly topics through the Gemini prompt in `docs/04_GENERATION_PIPELINE.md` (one call per script; review & fact-check each against the résumé).
-2. **TTS pass:** batch-generate all 7 voiceovers (`scripts/generate_voiceover_tts.sh`).
+1. **Sunday PM — Script batch (Day n..n+6):** run the 7 weekly topics through the Gemini prompt embedded in `scripts/generate_script_gemini.sh` (one call per script; review & fact-check each against the résumé).
+2. **Voiceover pass:** batch-generate all 7 voiceovers (provider pending new techstack).
 3. **Avatar & b-roll pass:** regenerate talking-head renders for the week's 🎤 videos with HeyGen (Imagen-3 master portrait → photo avatar); for 🎞 videos, batch Imagen-3 b-roll stills.
 4. **Edit pass (CapCut / Shotcut):** avatar or b-roll + captions + brand outro card ("Full case study → ivanbuilds.site") + AI presenter watermark. 9:16, ≤60 s.
 5. **Schedule:** TikTok Scheduler (or Later/Buffer) — 1/day, times per §1. Cross-post Reels/Shorts natively (do not use watermarked TikTok downloads).

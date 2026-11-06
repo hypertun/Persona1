@@ -1,7 +1,7 @@
 # 03 — Video Scripts (First 5)
 
 > Phase 3 deliverable — 30–60s, hook-driven, built for TikTok/Reels/Shorts.
-> Voice: see `docs/01_AI_PERSONA.md` §3. Production pipeline: `docs/04_GENERATION_PIPELINE.md`.
+> Voice: see `docs/01_AI_PERSONA.md` §3. Production pipeline: techstack TBD (being re-selected).
 > ✅ **Fact-check column** shows the exact résumé source for every claim — do not deviate.
 
 **Standard elements for every video**
@@ -98,4 +98,4 @@
 
 ## How the next 25 get written
 
-Each remaining calendar entry is generated with the Gemini prompt template in `docs/04_GENERATION_PIPELINE.md` §Gemini (it embeds the résumé extract + persona voice + this 5-beat structure), then fact-checked against the résumé before production. Batch 7 per week — see the strategy doc §5.
+Each remaining calendar entry is generated with the Gemini prompt template embedded in `scripts/generate_script_gemini.sh` (it embeds the résumé extract + persona voice + this 5-beat structure), then fact-checked against the résumé before production. Batch 7 per week — see the strategy doc §5.

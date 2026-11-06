@@ -72,7 +72,7 @@ Imagen 3 does not perfectly reproduce a face from a text prompt alone. Use this 
 | YouTube thumbnails | 16:9, 1280×720 | edit endpoint + platform-safe padding |
 | B-roll stills (whiteboard, laptop, server room) | 16:9 + 9:16 | edit endpoint, scene delta prompts |
 
-> Aspect ratios are set in the request `parameters` (`sampleImageSize`) or via prompt suffix — see the runnable script and `docs/04_GENERATION_PIPELINE.md`.
+> Aspect ratios are set in the request `parameters` (`sampleImageSize`) or via prompt suffix — see the runnable script `scripts/generate_avatar_imagen3.sh`.
 
 ### 2.5 Brand kit (site + video consistency)
 
@@ -111,4 +111,4 @@ Imagen 3 does not perfectly reproduce a face from a text prompt alone. Use this 
 
 - **Pacing:** brisk — one idea per 4–6 seconds of VO; captions on every video.
 - **Look (avatar render):** smart-casual (charcoal sweater/blazer), modern office, cyan accent lighting to match brand kit.
-- **Voice (TTS profile):** clear male voice, Singaporean-neutral accent, confident and warm; recommended Google voice: `en-US-Neural2-J` (tuned ~1.05× rate) — see `docs/04_GENERATION_PIPELINE.md` §TTS.
+- **Voice (TTS profile):** clear male voice, Singaporean-neutral accent, confident and warm; clear male voice, Singaporean-neutral accent, confident and warm — final TTS provider TBD with the new pipeline.
