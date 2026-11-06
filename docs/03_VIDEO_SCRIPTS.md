@@ -33,8 +33,16 @@
 6. **Voice realism carries the video** — the VO is the human-feel channel now;
    record it carefully (human read preferred; TTS acceptable at natural pace).
 7. **Sound design on cuts** — soft whoosh/tick per cut, music bed ≈ −18 dB.
-8. **Avatar shots: open + close only** — still portrait, 3–5% slow push-in
-   (open) / pull-back (close), "AI presenter" badge visible.
+8. **Living portrait beats (2–3 per video, max)** — short motion clips of the
+   persona: subtle head sway, breathing, natural blinks, a nod on a conviction
+   line — **mouth always neutral, never speaking**. Placed ONLY at: the hook
+   (open), the conviction beat, and the CTA (close). Everything else is receipts.
+   Fallback if no motion stack: still portrait with 3–5% Ken Burns push-in.
+
+   Why this works (and passed the quality bar): motion WITHOUT speech removes
+   the uncanny trigger (phoneme-accurate lips). A 2–4 s subtle-motion clip
+   rated "a lot better" in testing — it was the lip-synced mouth that read
+   robotic. Batch 3–5 motion clips ONCE and reuse them across all videos.
 
 ---
 
@@ -111,17 +119,17 @@
 
 | Time | VO (persona) | On-screen text | Shot (asset — all easy) |
 |------|--------------|----------------|--------------------------|
-| 0:00–0:04 | "Five years. Three industries. One obsession: systems that don't fall over." | **5 yrs · 3 industries · 1 obsession** stamps word-by-word on the beat | Portrait still, slow push-in — VO already mid-thought; hard cut on "fall over" |
+| 0:00–0:04 | "Five years. Three industries. One obsession: systems that don't fall over." | **5 yrs · 3 industries · 1 obsession** stamps word-by-word on the beat | **Living portrait** (motion, no speech): subtle sway + blink, mouth neutral; VO already mid-thought; hard cut on "fall over" |
 | 0:04–0:07 | "I'm Ivan — senior consultant developer from Singapore." | **senior consultant dev · Singapore** | Live-site hero screenshot (ivanbuilds), slow scroll |
 | 0:07–0:12 | "I build cloud-native systems — and I measure my work the way finance measures money." | **measured like money** | Site services section, slow pan; metric bar strip visible |
 | 0:12–0:21 | "The receipts: an email automation system that cut manual SAP order posting by eighty percent." | **80% ↓ manual SAP posting** stamps exactly on "eighty" | Metric card over blurred terminal/code (GCP Cloud Run log lines) |
 | 0:21–0:28 | "A QA framework that deleted sixty percent of manual testing at one of the region's biggest e-commerce platforms." | **60% ↓ manual test cycles** | Second metric card over scrolling test output |
 | 0:28–0:34 | "Database migrations — one hundred percent data integrity, every single one." | **100% data integrity** | Third metric card over a DB schema diagram |
 | 0:34–0:44 | "On this channel: the architecture behind those numbers — Golang concurrency, AWS and GCP design, and AI-augmented workflows that keep delivery fast." | topic cards: **Golang → AWS → GCP → AI workflows** | Rapid cuts (1.5–2 s each): four topic cards, one per topic word |
-| 0:44–0:50 | "Every video is a real system I've built — no hypotheticals, no recycled slide decks." | **real systems. real numbers.** | GitHub repos scrolling (WC2OpenAPI, EasyAnalytics, AEO Optim) — the actual receipts |
-| 0:50–0:55 | "Follow — and if you have a system that's buckling, the consultation link is in my bio." | **Follow @IvanBuilds · consult → link in bio** | Portrait still, slow pull-back → outro card; site contact section flash (0.3 s) |
+| 0:44–0:50 | "Every video is a real system I've built — no hypotheticals, no recycled slide decks." | **real systems. real numbers.** | Repos scroll 0–4 s → cut to **living portrait: a nod on "real systems"** (conviction beat, no speech) |
+| 0:50–0:55 | "Follow — and if you have a system that's buckling, the consultation link is in my bio." | **Follow @IvanBuilds · consult → link in bio** | **Living portrait** (gentle sway, slight smile on "Follow") → outro card; site contact section flash (0.3 s) |
 
-**Generation notes (Day 1):** every visual is one of — portrait still, live-site screenshots, GitHub screenshots, terminal screencaps, text cards. All doable in one CapCut session (~1.5 h); no AI video generation required. The "begins to talk" effect = portrait still + push-in + VO starting on frame 1, mid-sentence rhythm.
+**Generation notes (Day 1):** the only generated assets are **2–3 living-portrait motion clips** (2–4 s each, no speech, subtle motion — batch once, reuse in every future video). Everything else is one of — live-site screenshots, GitHub screenshots, terminal screencaps, text cards. One CapCut session (~1.5–2 h). The "real person" feel = motion at the hook/conviction/CTA + real receipts in between + a confident human (or human-grade) voice.
 
 **Caption:** New here? I'm Ivan — senior consultant developer (Singapore). Cloud-native systems, measured in results. This channel = the architecture behind the numbers. Follow along 🚀 #softwareengineering #golang #aws #gcp #devtok #sgtech
 
