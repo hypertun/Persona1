@@ -56,6 +56,6 @@
 
 ### B. Set up the AI generation pipeline (≈30 min, one-time)
 
-- [ ] **4. Media pipeline — techstack TBD** — the open-source video stack (edge-tts + Wan 2.2 + LatentSync-MLX) was built end-to-end, then **removed after the quality review** (mouth/eyes too robotic); ~53 GB of models + all pipeline scripts deleted. Ivan is re-selecting the stack; strategy docs (02–03) unchanged.
+- [x] **4. Media pipeline — techstack locked** — Wan 2.2-TI2V-5B **Q4_K_M GGUF via ComfyUI** (~8.5 GB, laptop-friendly): Montage Presenter format needs ONLY short no-speech motion clips, no lip-sync at all. Recipe verified: Wan22ImageToVideoLatent + shift 8 + 20 steps, ~17 min/clip, identity corr 1.00, clean background. Voiceover still TBD (real voice recommended).
 - [x] **5. Master persona portrait** — ✅ done: Gemini web app master (§2.1 prompt) → raw kept at output/imagen/master-raw.jpg (gitignored) → served as public/images/avatar.jpg (1600px, 265 KB) — hero + OG live on the deployed site
-- [ ] **6. Talking-head pipeline** — pending new techstack (see item 4)
+- [x] **6. Living-portrait set — ✅ rendered (batch once, reused forever)** — 5 beats: hook sway, conviction nod, CTA smile, breathing spare, head-turn spare → `output/living_portraits/`. No further AI generation needed for the 30-day calendar.
