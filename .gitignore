@@ -10,3 +10,4 @@ dist/
 output/
 .dev.vars
 .wrangler
+__pycache__/

@@ -39,6 +39,16 @@
    (open), the conviction beat, and the CTA (close). Everything else is receipts.
    Fallback if no motion stack: still portrait with 3–5% Ken Burns push-in.
 
+   **Locked render recipe (identity + clean background verified on M5 Pro):**
+   `scripts/render_living_portrait_comfy.py --steps 20 --prompt "…plain dark
+   studio background with soft cool teal rim light…"` — Wan 2.2-TI2V-5B Q4_K_M
+   GGUF via ComfyUI, **Wan22ImageToVideoLatent** (NOT WanImageToVideo — the 2.1
+   node's conditioning is silently ignored by this model; see git history for
+   the "old man" bug), ModelSamplingSD3 shift 8, cfg 5, uni_pc/simple, 480×832,
+   81 frames @ 24 fps ≈ 3.4 s. ~17 min/clip, ~10 GB RAM, 8.5 GB models.
+   Turbo LoRA (4 steps) is 5× faster and identity-safe but breaks the
+   background — not used for production.
+
    Why this works (and passed the quality bar): motion WITHOUT speech removes
    the uncanny trigger (phoneme-accurate lips). A 2–4 s subtle-motion clip
    rated "a lot better" in testing — it was the lip-synced mouth that read
