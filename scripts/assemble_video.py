@@ -47,9 +47,10 @@ BEATS = [
     ("AI-augmented","card",     "output/assembly_cards/topic_ai.png"),
     ("video",       "portrait", "output/living_portraits/02_conviction_nod.webm"),  # "Every video…"
     ("hypotheticals","card",    "output/assembly_cards/repos.png"),
-    ("Follow",      "portrait", "output/living_portraits/03_cta_smile.webm"),
+    ("Follow",      "card",     OUTRO_CARD),          # voice finishes over the outro card
 ]
-OUTRO_CARD = "output/assembly_cards/outro.png"   # holds after the last portrait
+OUTRO_CARD = "output/assembly_cards/outro.png"   # carries the "Follow…" line
+END_FACE = "output/living_portraits/03_cta_smile.webm"  # final beat: face lingers, smile forms
 PORTRAIT_LEN = 3.375  # seconds per living-portrait clip
 
 
@@ -62,7 +63,7 @@ def run(cmd):
 def main():
     words = json.load(open(TIMINGS))
     vo_end = words[-1]["end"] + 0.33
-    total = vo_end + OUTRO_HOLD
+    total = vo_end + PORTRAIT_LEN + 0.1   # closing face beat after the talking ends
 
     def t(word):
         return next(w["start"] for w in words if w["word"].strip(".,—").lower() == word.lower())
@@ -73,9 +74,8 @@ def main():
         start = 0.0 if anchor is None else t(anchor) - 0.15
         end = t(BEATS[i + 1][0]) - 0.15 if i + 1 < len(BEATS) and BEATS[i + 1][0] else total
         segs.append([start, end, kind, src])
-    last_start = segs[-1][0]
-    if total - last_start > PORTRAIT_LEN:                       # outro card after smile
-        segs.append([last_start + PORTRAIT_LEN, total, "card", OUTRO_CARD])
+    segs[-1][1] = vo_end                       # outro card ends when the voice stops
+    segs.append([vo_end, total, "portrait", END_FACE])  # …then the face appears, lingers, smiles
     segs = [(max(0.0, a), b, k, s) for a, b, k, s in segs if b > a]
 
     # ── render segments ─────────────────────────────────────────
