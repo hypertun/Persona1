@@ -31,7 +31,10 @@ BADGE = "output/assembly_cards/badge_ai_presenter.png"
 # the voice says the anchor word. "portrait" clips freeze their last frame if
 # the beat is longer than the clip.
 BEATS = [
-    (None,          "portrait", "output/living_portraits/01_hook_sway.webm"),   # from 0:00
+    # face carries only the first ~2.5s — the voice-over-a-still-face mismatch
+    # is glaring if the portrait holds longer; text carries the rest of the hook
+    (None,          "portrait", "output/living_portraits/01_hook_sway.webm"),   # "Five years. Three industries."
+    ("obsession",   "card",     "output/assembly_cards/hook_text.png"),        # "One obsession — systems that don't fall over."
     ("ivan",        "card",     "output/assembly_cards/hero_intro.png"),
     ("measure",     "card",     "output/assembly_cards/money.png"),
     ("receipts",    "card",     "output/assembly_cards/metric_80.png"),
