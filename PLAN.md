@@ -56,6 +56,6 @@
 
 ### B. Set up the AI generation pipeline (≈30 min, one-time)
 
-- [ ] **4. Media pipeline — techstack TBD** — second stack (ComfyUI + Wan 2.2 Q4 + edge-tts + ffmpeg assembler) was built end-to-end and produced a complete Day-1 video, then removed for a new approach. Montage Presenter format spec in docs/03 survives (stack-agnostic); portrait set + assets regenerated per the next stack.
+- [ ] **4. Media pipeline — techstack TBD** — third reset. Stacks tried and removed: (1) ComfyUI + Wan 2.2 Q4 + edge-tts + ffmpeg assembler — produced a complete Day-1 video; (2) sd-cli (stable-diffusion.cpp, all-CPU) + Higgs Audio v3 TTS + LatentSync 1.6 — measured: Higgs voice excellent (user-approved, RTF 2.4 CPU), LatentSync CPU infeasible (~30 h for 11.5 s), Metal probe passed the eye test, Wan CPU sampling ~5 s/frame-step + VAE decode ~42 s/frame (superlinear beyond ~9-frame chunks, 4k+1 frame counts only) ≈ 2.5 h per 6 s take. All artifacts deleted; portrait masters + Montage format spec (docs/03) survive. Measured economics available for the next approach.
 - [x] **5. Master persona portrait** — ✅ done: Gemini web app master (§2.1 prompt) → raw kept at output/imagen/master-raw.jpg (gitignored) → served as public/images/avatar.jpg (1600px, 265 KB) — hero + OG live on the deployed site
 - [ ] **6. Living-portrait set** — pending the next techstack (previous 5-clip set + Day-1 video deleted in the second stack reset)
