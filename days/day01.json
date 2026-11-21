@@ -1,0 +1,27 @@
+{
+  "vo": "output/voiceovers/day01_higgs.wav",
+  "timings": "output/work/word_timings.json",
+  "output": "output/final/day01_v2.mp4",
+  "badge": "output/assembly_cards/badge_ai_presenter.png",
+  "end_overlay": "output/assembly_cards/end_overlay.png",
+  "face_clip": "output/living_portraits/03_cta_smile.mp4",
+  "portrait_len": 3.5625,
+  "beats": [
+    {"anchor": null,          "kind": "card", "src": "output/assembly_cards/hook_1.png"},
+    {"anchor": "industries",  "kind": "card", "src": "output/assembly_cards/hook_2.png"},
+    {"anchor": "obsession",   "kind": "card", "src": "output/assembly_cards/hook_text.png"},
+    {"anchor": "ivan",        "kind": "card", "src": "output/assembly_cards/hero_intro.png"},
+    {"anchor": "measure",     "kind": "card", "src": "output/assembly_cards/money.png"},
+    {"anchor": "receipts",    "kind": "card", "src": "output/assembly_cards/metric_80.png"},
+    {"anchor": "QA",          "kind": "card", "src": "output/assembly_cards/metric_60.png"},
+    {"anchor": "migrations",  "kind": "card", "src": "output/assembly_cards/metric_100.png"},
+    {"anchor": "channel",     "kind": "card", "src": "output/assembly_cards/channel.png"},
+    {"anchor": "Golang",      "kind": "card", "src": "output/assembly_cards/topic_golang.png"},
+    {"anchor": "AWS",         "kind": "card", "src": "output/assembly_cards/topic_aws.png"},
+    {"anchor": "GCP",         "kind": "card", "src": "output/assembly_cards/topic_gcp.png"},
+    {"anchor": "AI-augmented","kind": "card", "src": "output/assembly_cards/topic_ai.png"},
+    {"anchor": "video",       "kind": "card", "src": "output/assembly_cards/every_video.png"},
+    {"anchor": "hypotheticals","kind": "card", "src": "output/assembly_cards/repos.png"},
+    {"anchor": "Follow",      "kind": "card", "src": "output/assembly_cards/outro.png"}
+  ]
+}

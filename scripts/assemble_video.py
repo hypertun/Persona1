@@ -1,41 +1,21 @@
 #!/usr/bin/env python3
-"""assemble_video.py — Day-1 assembly (ffmpeg + PIL, minutes, zero AI here).
+"""assemble_video.py — day-agnostic Montage Presenter assembly (ffmpeg + PIL).
 
-v4 — Space-generated portrait assets (mp4 672x832 @16fps, cover-cropped to
-1080x1920), Higgs VO, char-weighted word timings (sentence-exact), pure type
-open, end-on-face smile close. Beat map anchored to word timings; cards land
-on their exact voice beats. Badge + word-synced captions throughout.
+Usage: python3 scripts/assemble_video.py [days/dayNN.json]   (default: days/day01.json)
+
+Spec fields: vo, timings, output, badge, end_overlay, face_clip, portrait_len,
+beats[{anchor (word or null), kind (card|portrait), src}].
+Beat anchor = first occurrence of that word in the timings; card lands on its
+voice beat. Cards get a slow zoompan push; portraits cover-crop to 1080x1920.
+Badge bottom-left throughout; word-synced captions (fit-checked, ≤840px);
+end_overlay over the closing face from VO end. Face never speaks.
 """
 import json
 import os
 import subprocess
+import sys
 
-VO = "output/voiceovers/day01_higgs.wav"
-TIMINGS = "output/work/word_timings.json"
 FONT = "/System/Library/Fonts/Helvetica.ttc"
-BADGE = "output/assembly_cards/badge_ai_presenter.png"
-PORTRAIT_LEN = 3.5625  # Space clips: 3.5 s @16 fps
-
-BEATS = [
-    # pure typographic open — the face appears only at the end
-    (None,           "card",     "output/assembly_cards/hook_1.png"),          # "Five years."
-    ("industries",   "card",     "output/assembly_cards/hook_2.png"),         # "Three industries."
-    ("obsession",    "card",     "output/assembly_cards/hook_text.png"),     # "One obsession — systems that don't fall over."
-    ("ivan",         "card",     "output/assembly_cards/hero_intro.png"),
-    ("measure",      "card",     "output/assembly_cards/money.png"),
-    ("receipts",     "card",     "output/assembly_cards/metric_80.png"),
-    ("QA",           "card",     "output/assembly_cards/metric_60.png"),
-    ("migrations",   "card",     "output/assembly_cards/metric_100.png"),
-    ("channel",      "card",     "output/assembly_cards/channel.png"),
-    ("Golang",       "card",     "output/assembly_cards/topic_golang.png"),
-    ("AWS",          "card",     "output/assembly_cards/topic_aws.png"),
-    ("GCP",          "card",     "output/assembly_cards/topic_gcp.png"),
-    ("AI-augmented", "card",     "output/assembly_cards/topic_ai.png"),
-    ("video",        "card",     "output/assembly_cards/every_video.png"),   # conviction beat as type
-    ("hypotheticals","card",     "output/assembly_cards/repos.png"),
-    ("Follow",       "card",     "output/assembly_cards/outro.png"),          # voice ends over outro card
-]
-END_FACE = "output/living_portraits/03_cta_smile.mp4"  # face lingers, smile forms, end
 
 
 def run(cmd):
@@ -45,9 +25,11 @@ def run(cmd):
 
 
 def main():
-    words = json.load(open(TIMINGS))
+    spec_path = sys.argv[1] if len(sys.argv) > 1 else "days/day01.json"
+    spec = json.load(open(spec_path))
+    words = json.load(open(spec["timings"]))
     vo_end = words[-1]["end"] + 0.05
-    total = vo_end + PORTRAIT_LEN
+    total = vo_end + spec.get("portrait_len", 3.5625)
 
     def t(word):
         return next(w["start"] for w in words
@@ -55,12 +37,14 @@ def main():
 
     # ── plan segments ─────────────────────────────────────────────
     segs = []
-    for i, (anchor, kind, src) in enumerate(BEATS):
+    beats = spec["beats"]
+    for i, beat in enumerate(beats):
+        anchor = beat["anchor"]
         start = 0.0 if anchor is None else t(anchor) - 0.15
-        end = (t(BEATS[i + 1][0]) - 0.15 if i + 1 < len(BEATS)
+        end = (t(beats[i + 1]["anchor"]) - 0.15 if i + 1 < len(beats)
                else vo_end)
-        segs.append([start, end, kind, src])
-    segs.append([vo_end, total, "portrait", END_FACE])  # end-on-face close
+        segs.append([start, end, beat["kind"], beat["src"]])
+    segs.append([vo_end, total, "portrait", spec["face_clip"]])  # end-on-face close
     segs = [(max(0.0, a), b, k, s) for a, b, k, s in segs if b > a]
 
     # ── render segments ─────────────────────────────────────────
@@ -72,7 +56,6 @@ def main():
         dur = end - start
         out = f"output/work/segs/seg{i:02d}.mp4"
         if kind == "portrait":
-            # 672x832 → cover-crop 1080x1920, 16fps source → 24fps timeline
             vf = ("scale=1080:1920:force_original_aspect_ratio=increase:flags=lanczos,"
                   "crop=1080:1920,setsar=1,fps=24")
             run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-vf", vf,
@@ -96,7 +79,7 @@ def main():
     run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0",
          "-i", "output/work/concat.txt", "-c", "copy", "output/work/timeline.mp4"])
 
-    # ── caption cues: group words (≤3 or on punctuation) ─────────
+    # ── caption cues: group words (≤2 or on punctuation) ──────────
     group, cues, cue_start = [], [], None
 
     def flush():
@@ -157,33 +140,34 @@ def main():
         img.save(path)
         meta.append((a, b, path, img.width, img.height))
 
-    # ── compose: badge + caption overlays + VO ──────────────────
-    inputs = ["-i", "output/work/timeline.mp4", "-i", VO, "-i", BADGE,
+    # ── compose: badge + end overlay + captions + VO ─────────────
+    inputs = ["-i", "output/work/timeline.mp4", "-i", spec["vo"], "-i", spec["badge"],
               "-loop", "1", "-t", f"{total:.2f}",
-              "-i", "output/assembly_cards/end_overlay.png"]
+              "-i", spec["end_overlay"]]
     for a, b, p, w, h in meta:
         inputs += ["-loop", "1", "-t", f"{total:.2f}", "-i", p]
 
-    parts = ["[0:v][2:v]overlay=48:1692:enable='gte(t,0)'[vb0]",
+    parts = [f"[0:v][2:v]overlay=48:1692:enable='gte(t,0)'[vb0]",
              f"[vb0][3:v]overlay=0:0:enable='gte(t,{vo_end:.2f})'[vb]"]
     prev, n_in = "vb", 4 + len(meta)
     for i, (a, b, p, w, h) in enumerate(meta):
         idx = n_in - len(meta) + i
         label = "[vout]" if i == len(meta) - 1 else f"[c{i}]"
-        parts.append(f"[{prev}][{idx}:v]overlay=(1080-{w})/2:1490-{h}:"
-                     f"enable='between(t,{a:.2f},{b:.2f})'{label}")
+        parts.append(
+            f"[{prev}][{idx}:v]overlay=(1080-{w})/2:1560-{h}:"
+            f"enable='between(t,{a:.2f},{b:.2f})'{label}")
         prev = f"c{i}"
     fc = ";".join(parts)
 
     os.makedirs("output/final", exist_ok=True)
-    out = "output/final/day01_v2.mp4"
+    out = spec["output"]
     run(["ffmpeg", "-y", "-loglevel", "error"] + inputs +
-         ["-filter_complex", fc, "-map", "[vout]", "-map", "1:a",
-          "-t", f"{total:.2f}",
-          "-c:v", "libx264", "-preset", "medium", "-crf", "21",
-          "-pix_fmt", "yuv420p",
-          "-af", "apad", "-c:a", "aac", "-b:a", "192k", out])
-    print(f"✅ {out} — {total:.1f}s, {len(segs)} beats, {len(cues)} caption cues")
+        ["-filter_complex", fc, "-map", "[vout]", "-map", "1:a",
+         "-t", f"{total:.2f}",
+         "-c:v", "libx264", "-preset", "medium", "-crf", "21",
+         "-pix_fmt", "yuv420p",
+         "-af", "apad", "-c:a", "aac", "-b:a", "192k", out])
+    print(f"✅ {out} — {total:.1f}s, {len(segs)} beats, {len(cues)} caption cues  [{spec_path}]")
 
 
 if __name__ == "__main__":
