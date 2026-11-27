@@ -1,0 +1,20 @@
+{
+  "vo": "output/voiceovers/day04/day04_higgs.wav",
+  "timings": "output/work/word_timings_day04.json",
+  "output": "output/final/day04_v1.mp4",
+  "badge": "output/assembly_cards/badge_ai_presenter.png",
+  "end_overlay": "output/assembly_cards/end_overlay.png",
+  "face_clip": "output/living_portraits/03_cta_smile.mp4",
+  "portrait_len": 3.5625,
+  "beats": [
+    {"anchor": null,         "kind": "card", "src": "output/assembly_cards/day04/hook_1.png"},
+    {"anchor": "Developers","kind": "card", "src": "output/assembly_cards/day04/hook_2.png"},
+    {"anchor": "Ivan",      "kind": "card", "src": "output/assembly_cards/day04/hero_d4.png"},
+    {"anchor": "Workflow",  "kind": "card", "src": "output/assembly_cards/day04/wf1.png"},
+    {"anchor": "two",       "kind": "card", "src": "output/assembly_cards/day04/wf2.png"},
+    {"anchor": "three",     "kind": "card", "src": "output/assembly_cards/day04/wf3.png"},
+    {"anchor": "tools",     "kind": "card", "src": "output/assembly_cards/repos.png"},
+    {"anchor": "video",     "kind": "card", "src": "output/assembly_cards/every_video.png"},
+    {"anchor": "Follow",    "kind": "card", "src": "output/assembly_cards/outro.png"}
+  ]
+}
