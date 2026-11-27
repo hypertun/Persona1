@@ -12,6 +12,7 @@ end_overlay over the closing face from VO end. Face never speaks.
 """
 import json
 import os
+import string
 import subprocess
 import sys
 
@@ -33,7 +34,7 @@ def main():
 
     def t(word):
         return next(w["start"] for w in words
-                    if w["word"].strip(".,—:").lower() == word.lower())
+                    if w["word"].strip(string.punctuation + "—…").lower() == word.lower())
 
     # ── plan segments ─────────────────────────────────────────────
     segs = []
