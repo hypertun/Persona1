@@ -1,0 +1,20 @@
+{
+  "vo": "output/voiceovers/day05/day05_higgs.wav",
+  "timings": "output/work/word_timings_day05.json",
+  "output": "output/final/day05_v1.mp4",
+  "badge": "output/assembly_cards/badge_ai_presenter.png",
+  "end_overlay": "output/assembly_cards/end_overlay.png",
+  "face_clip": "output/living_portraits/03_cta_smile.mp4",
+  "portrait_len": 3.5625,
+  "beats": [
+    {"anchor": null,       "kind": "card", "src": "output/assembly_cards/day05/hook_1.png"},
+    {"anchor": "Terraform","kind": "card", "src": "output/assembly_cards/day05/hook_2.png"},
+    {"anchor": "Ivan",     "kind": "card", "src": "output/assembly_cards/day05/hero_d5.png"},
+    {"anchor": "feels",    "kind": "card", "src": "output/assembly_cards/day05/drift.png"},
+    {"anchor": "gives",    "kind": "card", "src": "output/assembly_cards/day05/definition.png"},
+    {"anchor": "apply",    "kind": "card", "src": "output/assembly_cards/day05/apply.png"},
+    {"anchor": "Overhead", "kind": "card", "src": "output/assembly_cards/day05/claim.png"},
+    {"anchor": "video",    "kind": "card", "src": "output/assembly_cards/every_video.png"},
+    {"anchor": "Follow",   "kind": "card", "src": "output/assembly_cards/outro.png"}
+  ]
+}
